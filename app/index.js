@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
+import Checkbox from 'expo-checkbox';
 
 export default function IndexScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-  const router = useRouter(); // <- ADICIONADO AQUI
+  const [isNutricionista, setIsNutricionista] = useState(false);
+  const router = useRouter();
 
   const validateEmail = (email) => {
     return email.includes('@') && email.includes('.');
@@ -31,7 +33,8 @@ export default function IndexScreen() {
         body: JSON.stringify({
           nome: "Usuário",
           email,
-          senha: password // <- certifique-se de usar 'senhaHash' conforme sua API
+          senha: password,
+          tipoUsuario: isNutricionista ? 'nutricionista' : 'cliente'
         }),
       });
 
@@ -47,6 +50,7 @@ export default function IndexScreen() {
       setEmail('');
       setPassword('');
       setConfirmPassword('');
+      setIsNutricionista(false);
     } catch (error) {
       console.error('Erro ao conectar com a API:', error);
       alert('Erro de conexão com o servidor.');
@@ -55,35 +59,38 @@ export default function IndexScreen() {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5036/api/Usuarios');
-
+      const response = await fetch('http://localhost:5036/api/Usuarios/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          senha: password,
+        }),
+      });
+  
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Erro ao buscar usuários:', errorText);
-        alert('Erro ao buscar usuários.');
+        console.error('Erro no login:', errorText);
+        alert('Email ou senha incorretos.');
         return;
       }
-
-      const usuarios = await response.json();
-
-      const usuarioEncontrado = usuarios.find(
-        (user) => user.email === email && user.senha === password
-      );
-
-      if (usuarioEncontrado) {
-        router.push('/dashboard');
+  
+      const usuario = await response.json();
+  
+      // Salva ID no localStorage ou qualquer outro estado/contexto
+      window.localStorage.setItem('userId', usuario.usuarioId);
+  
+      // Redireciona com base no tipo
+      if (usuario.tipoUsuario === 'Nutricionista') {
+        router.push('/dashnutri');
       } else {
-        alert('Email ou senha incorretos.');
+        router.push('/dashboard');
       }
     } catch (error) {
       console.error('Erro ao conectar com a API:', error);
       alert('Erro de conexão com o servidor.');
     }
   };
-
-  
-  
-  
   
 
   return (
@@ -117,13 +124,23 @@ export default function IndexScreen() {
         />
 
         {isRegistering && (
-          <TextInput
-            style={styles.input}
-            placeholder="Confirmar Senha"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Confirmar Senha"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+            />
+            <View style={styles.checkboxContainer}>
+              <Checkbox
+                value={isNutricionista}
+                onValueChange={setIsNutricionista}
+                color={isNutricionista ? '#097d4c' : undefined}
+              />
+              <Text style={styles.checkboxLabel}>Sou nutricionista</Text>
+            </View>
+          </>
         )}
 
         <TouchableOpacity
@@ -178,7 +195,7 @@ const styles = StyleSheet.create({
   formContainer: {
     alignItems: 'center',
     width: '100%',
-    marginTop: 20,
+    marginTop: 1,
   },
   loginTitle: {
     fontSize: 24,
@@ -187,7 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   input: {
-    width: '80%',
+    width: '40%',
     height: 40,
     backgroundColor: '#FFF',
     borderRadius: 10,
@@ -199,7 +216,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     marginTop: 10,
-    width: '80%',
+    width: '40%',
     alignItems: 'center',
   },
   buttonText: {
@@ -211,5 +228,14 @@ const styles = StyleSheet.create({
     color: '#097d4c',
     marginTop: 10,
     textDecorationLine: 'underline',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  checkboxLabel: {
+    marginLeft: 10,
+    color: '#097d4c',
   },
 });
