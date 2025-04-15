@@ -11,8 +11,7 @@ CREATE TABLE Usuarios (
     DataNascimento DATE,
     Sexo ENUM('Masculino', 'Feminino', 'Outro') NULL,
     Telefone VARCHAR(15) NULL,
-    Endereco VARCHAR(255) NULL,
-    FotoPerfil VARCHAR(255) NULL,  
+    Endereco VARCHAR(255) NULL,  
     Ativo TINYINT(1) DEFAULT 1 
 );
 

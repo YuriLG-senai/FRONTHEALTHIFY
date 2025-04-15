@@ -34,7 +34,7 @@ export default function IndexScreen() {
           nome: "Usuário",
           email,
           senha: password,
-          tipoUsuario: isNutricionista ? 'nutricionista' : 'cliente'
+          tipoUsuario: isNutricionista ? 'Nutricionista' : 'Cliente'
         }),
       });
 
