@@ -123,8 +123,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: 400,
+    height: 400,
   },
   rightMenu: {
     width: 220,
