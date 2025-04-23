@@ -1,101 +1,331 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, Image, ImageBackground
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import Checkbox from 'expo-checkbox';
+import { Picker } from '@react-native-picker/picker';
 
-const Cadastro = () => {
+export default function IndexScreen() {
   const [email, setEmail] = useState('');
   const [nome, setNome] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [dataNascimento, setDataNascimento] = useState('');
   const [sexo, setSexo] = useState('');
   const [endereco, setEndereco] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [isNutricionista, setIsNutricionista] = useState(false);
 
-  // Campos adicionais para o Cliente ou Nutricionista
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [objetivo, setObjetivo] = useState('');
   const [nivelAtividade, setNivelAtividade] = useState('');
   const [preferenciasAlimentares, setPreferenciasAlimentares] = useState('');
   const [doencasPreexistentes, setDoencasPreexistentes] = useState('');
+
   const [especialidade, setEspecialidade] = useState('');
   const [descricao, setDescricao] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const router = useRouter();
+
+  const validateEmail = (email) => {
+    return email.includes('@') && email.includes('.');
+  };
+
+  const handleRegister = async () => {
+    if (!validateEmail(email)) {
+      alert('Email inválido. Por favor, insira um email válido.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert('As senhas não coincidem.');
+      return;
+    }
+
+    if (!cpf || !telefone || !endereco || !dataNascimento) {
+      alert('CPF, telefone, endereço e data de nascimento são obrigatórios.');
+      return;
+    }
+
+    const usuarioPayload = {
+      nome,
+      email,
+      senha: password,
+      tipoUsuario: isNutricionista ? 'Nutricionista' : 'Cliente',
+      cpf,
+      telefone,
+      sexo,
+      endereco,
+      dataNascimento
+    };
 
     try {
-      // Preparar o corpo da requisição
-      const usuarioPayload = {
-        nome,
-        email,
-        senha: password,
-        tipoUsuario: isNutricionista ? 'Nutricionista' : 'Cliente',
-        cpf,
-        telefone,
-        dataNascimento,
-        sexo,
-        endereco,
-        peso: isNutricionista ? null : peso,
-        altura: isNutricionista ? null : altura,
-        objetivo: isNutricionista ? null : objetivo,
-        nivelAtividade: isNutricionista ? null : nivelAtividade,
-        preferenciasAlimentares: isNutricionista ? null : preferenciasAlimentares,
-        doencasPreexistentes: isNutricionista ? null : doencasPreexistentes,
-        especialidade: isNutricionista ? especialidade : null,
-        descricao: isNutricionista ? descricao : null
-      };
+      const usuarioResponse = await fetch('http://localhost:5036/api/Usuarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(usuarioPayload),
+      });
 
-      // Enviar a requisição POST para o backend
-      const response = await axios.post('http://localhost:5000/api/usuarios', usuarioPayload);
+      if (!usuarioResponse.ok) {
+        const errorText = await usuarioResponse.text();
+        console.error('Erro da API:', errorText);
+        alert('Erro ao cadastrar usuário: ' + usuarioResponse.status);
+        return;
+      }
 
-      console.log('Usuário cadastrado com sucesso:', response.data);
+      const usuarioCriado = await usuarioResponse.json();
+      const usuarioId = usuarioCriado.usuarioId;
+
+      if (!usuarioId) {
+        alert('Usuário criado, mas não foi possível obter o ID.');
+        return;
+      }
+
+      const dadosComplementares = isNutricionista
+        ? { usuarioId, especialidade, descricao }
+        : {
+            usuarioId,
+            peso: parseFloat(peso),
+            altura: parseFloat(altura),
+            objetivo,
+            nivelAtividade,
+            preferenciasAlimentares,
+            doencasPreexistentes
+          };
+
+      const endpoint = isNutricionista ? 'Nutricionistas' : 'Clientes';
+      const complementoResponse = await fetch(`http://localhost:5036/api/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosComplementares),
+      });
+
+      if (!complementoResponse.ok) {
+        const errorText = await complementoResponse.text();
+        console.error('Erro ao cadastrar dados adicionais:', errorText);
+        alert('Erro ao cadastrar dados adicionais: ' + complementoResponse.status);
+        return;
+      }
+
+      alert('Cadastro realizado com sucesso!');
+      setIsRegistering(false);
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setNome('');
+      setCpf('');
+      setTelefone('');
+      setSexo('');
+      setEndereco('');
+      setDataNascimento('');
+      setPeso('');
+      setAltura('');
+      setObjetivo('');
+      setNivelAtividade('');
+      setPreferenciasAlimentares('');
+      setDoencasPreexistentes('');
+      setEspecialidade('');
+      setDescricao('');
+      setIsNutricionista(false);
+
     } catch (error) {
-      console.error('Erro ao cadastrar usuário:', error.response ? error.response.data : error.message);
+      console.error('Erro ao conectar com a API:', error);
+      alert('Erro de conexão com o servidor.');
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      const response = await fetch('http://localhost:5036/api/Usuarios/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha: password }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Erro no login:', errorText);
+        alert('Email ou senha incorretos.');
+        return;
+      }
+
+      const usuario = await response.json();
+      window.localStorage.setItem('userId', usuario.usuarioId);
+
+      if (usuario.tipoUsuario === 'Nutricionista') {
+        router.push('/dashnutri');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error('Erro ao conectar com a API:', error);
+      alert('Erro de conexão com o servidor.');
     }
   };
 
   return (
-    <div>
-      <h1>Cadastro</h1>
-      <form onSubmit={handleSubmit}>
-        <input type="text" placeholder="Nome" value={nome} onChange={e => setNome(e.target.value)} required />
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} required />
-        <input type="password" placeholder="Confirmar Senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
-        <input type="text" placeholder="CPF" value={cpf} onChange={e => setCpf(e.target.value)} required />
-        <input type="text" placeholder="Telefone" value={telefone} onChange={e => setTelefone(e.target.value)} required />
-        <input type="date" placeholder="Data de Nascimento" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} required />
-        <select value={sexo} onChange={e => setSexo(e.target.value)} required>
-          <option value="">Sexo</option>
-          <option value="M">Masculino</option>
-          <option value="F">Feminino</option>
-        </select>
-        <input type="text" placeholder="Endereço" value={endereco} onChange={e => setEndereco(e.target.value)} required />
-        
-        {/* Campos adicionais */}
-        {isNutricionista ? (
+    <ScrollView contentContainerStyle={styles.container}>
+      <ImageBackground style={styles.background}>
+        <Image
+          source={{ uri: 'https://i.imgur.com/YC3XmHz.png' }}
+          style={styles.logo}
+        />
+        <Text style={styles.welcomeText}>Bem-vindo ao Healthify!</Text>
+        <Text style={styles.description}>Seu aplicativo para bem-estar e saúde.</Text>
+      </ImageBackground>
+
+      <View style={styles.formContainer}>
+        <Text style={styles.loginTitle}>{isRegistering ? 'Crie sua conta' : 'Faça seu login'}</Text>
+
+        <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+        <TextInput style={styles.input} placeholder="Senha" value={password} onChangeText={setPassword} secureTextEntry />
+
+        {isRegistering && (
           <>
-            <input type="text" placeholder="Especialidade" value={especialidade} onChange={e => setEspecialidade(e.target.value)} />
-            <input type="text" placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} />
-          </>
-        ) : (
-          <>
-            <input type="text" placeholder="Peso" value={peso} onChange={e => setPeso(e.target.value)} />
-            <input type="text" placeholder="Altura" value={altura} onChange={e => setAltura(e.target.value)} />
-            <input type="text" placeholder="Objetivo" value={objetivo} onChange={e => setObjetivo(e.target.value)} />
-            <input type="text" placeholder="Nível de Atividade" value={nivelAtividade} onChange={e => setNivelAtividade(e.target.value)} />
-            <input type="text" placeholder="Preferências Alimentares" value={preferenciasAlimentares} onChange={e => setPreferenciasAlimentares(e.target.value)} />
-            <input type="text" placeholder="Doenças Preexistentes" value={doencasPreexistentes} onChange={e => setDoencasPreexistentes(e.target.value)} />
+            <TextInput style={styles.input} placeholder="Confirmar Senha" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+            <TextInput style={styles.input} placeholder="Nome" value={nome} onChangeText={setNome} />
+            <TextInput style={styles.input} placeholder="CPF" value={cpf} onChangeText={setCpf} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
+            <TextInput style={styles.input} placeholder="Endereço" value={endereco} onChangeText={setEndereco} />
+            <TextInput style={styles.input} placeholder="Data de Nascimento (YYYY-MM-DD)" value={dataNascimento} onChangeText={setDataNascimento} />
+
+            <Picker
+              selectedValue={sexo}
+              onValueChange={(itemValue) => setSexo(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione o sexo" value="" />
+              <Picker.Item label="Masculino" value="Masculino" />
+              <Picker.Item label="Feminino" value="Feminino" />
+              <Picker.Item label="Outro" value="Outro" />
+            </Picker>
+
+            {isNutricionista ? (
+              <>
+                <TextInput style={styles.input} placeholder="Especialidade" value={especialidade} onChangeText={setEspecialidade} />
+                <TextInput style={styles.input} placeholder="Descrição" value={descricao} onChangeText={setDescricao} multiline />
+              </>
+            ) : (
+              <>
+                <TextInput style={styles.input} placeholder="Peso (kg)" value={peso} onChangeText={setPeso} keyboardType="numeric" />
+                <TextInput style={styles.input} placeholder="Altura (cm)" value={altura} onChangeText={setAltura} keyboardType="numeric" />
+                <TextInput style={styles.input} placeholder="Objetivo" value={objetivo} onChangeText={setObjetivo} />
+                <TextInput style={styles.input} placeholder="Nível de Atividade" value={nivelAtividade} onChangeText={setNivelAtividade} />
+                <TextInput style={styles.input} placeholder="Preferências Alimentares" value={preferenciasAlimentares} onChangeText={setPreferenciasAlimentares} />
+                <TextInput style={styles.input} placeholder="Doenças Preexistentes" value={doencasPreexistentes} onChangeText={setDoencasPreexistentes} />
+              </>
+            )}
+
+            <View style={styles.checkboxContainer}>
+              <Checkbox value={isNutricionista} onValueChange={setIsNutricionista} color={isNutricionista ? '#097d4c' : undefined} />
+              <Text style={styles.checkboxLabel}>Sou nutricionista</Text>
+            </View>
           </>
         )}
-        
-        <button type="submit">Cadastrar</button>
-      </form>
-    </div>
-  );
-};
 
-export default Cadastro;
+        <TouchableOpacity style={styles.button} onPress={isRegistering ? handleRegister : handleLogin}>
+          <Text style={styles.buttonText}>{isRegistering ? 'Cadastrar' : 'Entrar'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)}>
+          <Text style={styles.registerText}>
+            {isRegistering ? 'Já tem conta? Faça login' : 'Não tem conta? Cadastre-se'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#f6eecf',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 50,
+  },
+  background: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: 400,
+  },
+  logo: {
+    width: 240,
+    height: 240,
+    resizeMode: 'contain',
+  },
+  welcomeText: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#097d4c',
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 20,
+    color: '#097d4c',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  formContainer: {
+    width: '90%',
+    padding: 20,
+  },
+  loginTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#097d4c',
+    marginBottom: 10,
+  },
+  input: {
+    height: 50,
+    borderColor: '#097d4c',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+  },
+  picker: {
+    height: 50,
+    borderColor: '#097d4c',
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  checkboxLabel: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#097d4c',
+  },
+  button: {
+    backgroundColor: '#097d4c',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+  registerText: {
+    color: '#097d4c',
+    fontSize: 16,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+});
