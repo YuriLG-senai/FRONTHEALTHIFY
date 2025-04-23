@@ -1,22 +1,35 @@
-CREATE DATABASE healthify;
+CREATE DATABASE IF NOT EXISTS healthify;
 USE healthify;
 
+-- Drop as tabelas se existirem
+DROP TABLE IF EXISTS Usuarios;
+DROP TABLE IF EXISTS Clientes;
+DROP TABLE IF EXISTS Nutricionistas;
+DROP TABLE IF EXISTS Consultas;
+DROP TABLE IF EXISTS PlanosAlimentares;
+DROP TABLE IF EXISTS Receitas;
+DROP TABLE IF EXISTS PlanoReceitas;
+DROP TABLE IF EXISTS ProgressoCliente;
+
+-- Criar a tabela de Usuários
 CREATE TABLE Usuarios (
     UsuarioId INT AUTO_INCREMENT PRIMARY KEY,
     Nome VARCHAR(100) NOT NULL,
     Email VARCHAR(100) NOT NULL UNIQUE,
-    SenhaHash VARCHAR(255) NOT NULL,  
+    senha VARCHAR(255) NOT NULL,  
     TipoUsuario ENUM('Cliente', 'Nutricionista') NOT NULL, 
     DataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
     DataNascimento DATE,
     Sexo ENUM('Masculino', 'Feminino', 'Outro') NULL,
     Telefone VARCHAR(15) NULL,
     Endereco VARCHAR(255) NULL,  
-    Ativo TINYINT(1) DEFAULT 1 
+    Ativo TINYINT(1) DEFAULT 1,
+    cpf VARCHAR(11) NOT NULL UNIQUE
 );
 
+-- Criar a tabela de Clientes
 CREATE TABLE Clientes (
-    ClienteId INT PRIMARY KEY,
+    ClienteId INT AUTO_INCREMENT PRIMARY KEY,
     UsuarioId INT,
     Peso DECIMAL(5,2) NULL,
     Altura DECIMAL(5,2) NULL,
@@ -27,8 +40,9 @@ CREATE TABLE Clientes (
     FOREIGN KEY (UsuarioId) REFERENCES Usuarios(UsuarioId)
 );
 
+-- Criar a tabela de Nutricionistas
 CREATE TABLE Nutricionistas (
-    NutricionistaId INT PRIMARY KEY,
+    NutricionistaId INT AUTO_INCREMENT PRIMARY KEY,
     UsuarioId INT,
     Especialidade VARCHAR(255) NULL,  
     Descricao VARCHAR(500) NULL, 
@@ -36,6 +50,7 @@ CREATE TABLE Nutricionistas (
     FOREIGN KEY (UsuarioId) REFERENCES Usuarios(UsuarioId)
 );
 
+-- Create the Consultas table
 CREATE TABLE Consultas (
     ConsultaId INT AUTO_INCREMENT PRIMARY KEY,
     ClienteId INT,
@@ -48,7 +63,8 @@ CREATE TABLE Consultas (
     FOREIGN KEY (NutricionistaId) REFERENCES Nutricionistas(NutricionistaId)
 );
 
-	CREATE TABLE PlanosAlimentares (
+-- Create the PlanosAlimentares table
+CREATE TABLE PlanosAlimentares (
     PlanoId INT AUTO_INCREMENT PRIMARY KEY,
     ClienteId INT,
     NutricionistaId INT,
@@ -61,6 +77,7 @@ CREATE TABLE Consultas (
     FOREIGN KEY (NutricionistaId) REFERENCES Nutricionistas(NutricionistaId)
 );
 
+-- Create the Receitas table
 CREATE TABLE Receitas (
     ReceitaId INT AUTO_INCREMENT PRIMARY KEY,
     Nome VARCHAR(255) NOT NULL,
@@ -72,6 +89,7 @@ CREATE TABLE Receitas (
     FotoReceita VARCHAR(255) NULL
 );
 
+-- Create the PlanoReceitas table
 CREATE TABLE PlanoReceitas (
     PlanoId INT,
     ReceitaId INT,
@@ -81,6 +99,7 @@ CREATE TABLE PlanoReceitas (
     FOREIGN KEY (ReceitaId) REFERENCES Receitas(ReceitaId)
 );
 
+-- Create the ProgressoCliente table
 CREATE TABLE ProgressoCliente (
     ProgressoId INT AUTO_INCREMENT PRIMARY KEY,
     ClienteId INT,
@@ -92,11 +111,13 @@ CREATE TABLE ProgressoCliente (
     FOREIGN KEY (ClienteId) REFERENCES Clientes(ClienteId)
 );
 
+-- Create indexes
 CREATE INDEX idx_cliente_email ON Usuarios(Email);
 CREATE INDEX idx_cliente_nome ON Usuarios(Nome);
 CREATE INDEX idx_progresso_cliente ON ProgressoCliente(ClienteId);
 CREATE INDEX idx_consulta_data ON Consultas(DataConsulta);
 
-
-
-		
+-- Test the tables
+SELECT * FROM Usuarios;
+SELECT * FROM Clientes;
+SELECT * FROM Nutricionistas;
