@@ -32,6 +32,11 @@ export default function RootLayout() {
   <Stack>
     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     <Stack.Screen name="index" options={{ headerShown: false }} />
+    <Stack.Screen name="MarcarConsulta" options={{ headerShown: false }} />
+    <Stack.Screen name="questionario" options={{ headerShown: false }} />
+    <Stack.Screen name="plano-alimentar" options={{ headerShown: false }} />
+    <Stack.Screen name="treino" options={{ headerShown: false }} />
+    <Stack.Screen name="progresso" options={{ headerShown: false }} />
     <Stack.Screen name="dashnutri" options={{ headerShown: false }} />
     <Stack.Screen name="dashboard" options={{ headerShown: false }} />
 

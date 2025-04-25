@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+export const options = {
+  headerShown: false,
+};
 
 const Treino = () => {
+  const router = useRouter();
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [recomendacao, setRecomendacao] = useState(null);
@@ -52,49 +59,74 @@ const Treino = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.titulo}>Planejamento de Treino</Text>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        {/* Botão Voltar para Dashboard */}
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.push('/dashboard')}
+        >
+          <Ionicons name="arrow-back" size={24} color="#097d4c" />
+          <Text style={styles.backButtonText}>Voltar para Dashboard</Text>
+        </TouchableOpacity>
 
-      <Text style={styles.label}>Peso (kg)</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={peso}
-        onChangeText={setPeso}
-        placeholder="Ex: 85"
-      />
+        <Text style={styles.titulo}>Planejamento de Treino</Text>
 
-      <Text style={styles.label}>Altura (m)</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={altura}
-        onChangeText={setAltura}
-        placeholder="Ex: 1.75"
-      />
+        <Text style={styles.label}>Peso (kg)</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={peso}
+          onChangeText={setPeso}
+          placeholder="Ex: 85"
+        />
 
-      <TouchableOpacity style={styles.botao} onPress={calcularTreino}>
-        <Text style={styles.textoBotao}>Ver Recomendação</Text>
-      </TouchableOpacity>
+        <Text style={styles.label}>Altura (m)</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={altura}
+          onChangeText={setAltura}
+          placeholder="Ex: 1.75"
+        />
 
-      {recomendacao && (
-        <View style={styles.recomendacaoBox}>
-          <Text style={styles.recomendacaoTitulo}>{recomendacao.titulo}</Text>
-          {recomendacao.dicas.map((dica, index) => (
-            <Text key={index} style={styles.recomendacaoTexto}>• {dica}</Text>
-          ))}
-        </View>
-      )}
-    </View>
+        <TouchableOpacity style={styles.botao} onPress={calcularTreino}>
+          <Text style={styles.textoBotao}>Ver Recomendação</Text>
+        </TouchableOpacity>
+
+        {recomendacao && (
+          <View style={styles.recomendacaoBox}>
+            <Text style={styles.recomendacaoTitulo}>{recomendacao.titulo}</Text>
+            {recomendacao.dicas.map((dica, index) => (
+              <Text key={index} style={styles.recomendacaoTexto}>• {dica}</Text>
+            ))}
+          </View>
+        )}
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+    backgroundColor: '#f6eecf',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f6eecf',
     padding: 20,
-    justifyContent: 'center',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 10,
+  },
+  backButtonText: {
+    color: '#097d4c',
+    fontSize: 16,
+    marginLeft: 8,
+    fontWeight: '500',
   },
   titulo: {
     fontSize: 24,
@@ -121,6 +153,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
+    marginTop: 10,
   },
   textoBotao: {
     color: '#fff',
@@ -132,6 +165,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffffcc',
     padding: 20,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#097d4c',
   },
   recomendacaoTitulo: {
     fontSize: 18,
@@ -144,6 +179,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#444',
     marginBottom: 5,
+    lineHeight: 22,
   },
 });
 

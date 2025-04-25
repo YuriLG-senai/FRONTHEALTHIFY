@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
+export const options = {
+  headerShown: false,
+};
 export default function Questionario() {
+  const router = useRouter(); 
   const [respostas, setRespostas] = useState({});
 
   const perguntas = [
@@ -61,7 +67,10 @@ export default function Questionario() {
       opcoes: ['Sim, sempre', 'Às vezes', 'Não'],
     },
   ];
-
+  
+  const handleGoToDashboard = () => {
+    router.push('/dashboard'); // Navega para a dashboard
+  };
   const responder = (perguntaId, opcao) => {
     setRespostas((prev) => ({
       ...prev,
@@ -73,8 +82,16 @@ export default function Questionario() {
     console.log('Respostas enviadas:', respostas);
     Alert.alert('Obrigado!', 'Suas respostas foram enviadas com sucesso.');
   };
-
   return (
+    <ScrollView contentContainerStyle={styles.container}>
+    {/* Botão Voltar para Dashboard */}
+    <TouchableOpacity 
+      style={styles.dashboardButton} 
+      onPress={handleGoToDashboard}
+    >
+      <Ionicons name="home" size={30} color="#097d4c" style={{ marginLeft: 75 }} />
+      <Text style={styles.dashboardButtonText}>Voltar para Dashboard</Text>
+    </TouchableOpacity>
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.titulo}>Questionário de Rotina</Text>
 
@@ -109,10 +126,19 @@ export default function Questionario() {
         <Text style={styles.botaoTexto}>Enviar</Text>
       </TouchableOpacity>
     </ScrollView>
+    </ScrollView>
   );
 }
 
+
 const styles = StyleSheet.create({
+  dashboardButtonText: {
+    color: '#097d4c',       // Cor verde do Healthify
+    fontSize: 16,           // Tamanho médio
+    fontWeight: '600',      // Semi-bold
+    marginLeft: 8,          // Espaço entre ícone e texto
+    fontFamily: 'Arial',   // Fonte clean (certifique-se de carregar a fonte)
+  },
   container: {
     paddingVertical: 40,
     paddingHorizontal: 20,

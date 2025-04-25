@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import Checkbox from 'expo-checkbox';
 import { Picker } from '@react-native-picker/picker';
+import { Platform } from 'react-native';
 
 export default function IndexScreen() {
   const [email, setEmail] = useState('');
@@ -35,6 +36,13 @@ export default function IndexScreen() {
   const validateEmail = (email) => {
     return email.includes('@') && email.includes('.');
   };
+  const formatDateToISO = (inputDate) => {
+    if (!inputDate) return '';
+    const [day, month, year] = inputDate.split('-');
+    if (!day || !month || !year) return '';
+    return `${year}-${month}-${day}`;
+  };
+
 
   const handleRegister = async () => {
     if (!validateEmail(email)) {
@@ -61,7 +69,7 @@ export default function IndexScreen() {
       telefone,
       sexo,
       endereco,
-      dataNascimento
+      dataNascimento: formatDateToISO(dataNascimento)
     };
 
     try {
@@ -89,14 +97,14 @@ export default function IndexScreen() {
       const dadosComplementares = isNutricionista
         ? { usuarioId, especialidade, descricao }
         : {
-            usuarioId,
-            peso: parseFloat(peso),
-            altura: parseFloat(altura),
-            objetivo,
-            nivelAtividade,
-            preferenciasAlimentares,
-            doencasPreexistentes
-          };
+          usuarioId,
+          peso: parseFloat(peso),
+          altura: parseFloat(altura),
+          objetivo,
+          nivelAtividade,
+          preferenciasAlimentares,
+          doencasPreexistentes
+        };
 
       const endpoint = isNutricionista ? 'Nutricionistas' : 'Clientes';
       const complementoResponse = await fetch(`http://localhost:5036/api/${endpoint}`, {
@@ -192,7 +200,14 @@ export default function IndexScreen() {
             <TextInput style={styles.input} placeholder="CPF" value={cpf} onChangeText={setCpf} keyboardType="numeric" />
             <TextInput style={styles.input} placeholder="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
             <TextInput style={styles.input} placeholder="Endereço" value={endereco} onChangeText={setEndereco} />
-            <TextInput style={styles.input} placeholder="Data de Nascimento (YYYY-MM-DD)" value={dataNascimento} onChangeText={setDataNascimento} />
+            <TextInput
+              style={styles.input}
+              placeholder="Data de Nascimento (DD-MM-YYYY)"
+              value={dataNascimento}
+              onChangeText={setDataNascimento}
+              keyboardType="numeric"
+            />
+
 
             <Picker
               selectedValue={sexo}
@@ -215,7 +230,18 @@ export default function IndexScreen() {
                 <TextInput style={styles.input} placeholder="Peso (kg)" value={peso} onChangeText={setPeso} keyboardType="numeric" />
                 <TextInput style={styles.input} placeholder="Altura (cm)" value={altura} onChangeText={setAltura} keyboardType="numeric" />
                 <TextInput style={styles.input} placeholder="Objetivo" value={objetivo} onChangeText={setObjetivo} />
-                <TextInput style={styles.input} placeholder="Nível de Atividade" value={nivelAtividade} onChangeText={setNivelAtividade} />
+                <Picker
+                  selectedValue={nivelAtividade}
+                  onValueChange={(itemValue) => setNivelAtividade(itemValue)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Selecione o nível de atividade" value="" />
+                  <Picker.Item label="Sedentário" value="Sedentário" />
+                  <Picker.Item label="Levemente ativo" value="Levemente ativo" />
+                  <Picker.Item label="Moderadamente ativo" value="Moderadamente ativo" />
+                  <Picker.Item label="Muito ativo" value="Muito ativo" />
+                </Picker>
+
                 <TextInput style={styles.input} placeholder="Preferências Alimentares" value={preferenciasAlimentares} onChangeText={setPreferenciasAlimentares} />
                 <TextInput style={styles.input} placeholder="Doenças Preexistentes" value={doencasPreexistentes} onChangeText={setDoencasPreexistentes} />
               </>

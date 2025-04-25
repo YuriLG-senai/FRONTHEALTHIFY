@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Modal, Button } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
-
+export const options = {
+  headerShown: false, // Isso remove a barra de título
+};
 const PlanoAlimentar = () => {
   const router = useRouter();
 

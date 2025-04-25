@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+
+
 export default function MarcarConsulta() {
   const router = useRouter();
 
@@ -20,8 +22,13 @@ export default function MarcarConsulta() {
         <Text style={styles.cardText}>Em breve você poderá escolher uma data e horário aqui!</Text>
       </View>
     </View>
+    
   );
 }
+
+export const options = {
+  headerShown: false,
+};
 
 const styles = StyleSheet.create({
   container: {
