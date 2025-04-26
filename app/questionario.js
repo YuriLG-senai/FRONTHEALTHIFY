@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export const options = {
   headerShown: false,
 };
+
 export default function Questionario() {
-  const router = useRouter(); 
+  const router = useRouter();
   const [respostas, setRespostas] = useState({});
+  const [pageIndex, setPageIndex] = useState(0);  // Controla a página atual das perguntas
+  const [visibleQuestions, setVisibleQuestions] = useState([0, 1]);  // Controla quais perguntas são visíveis
+  const fadeAnim = useRef(new Animated.Value(0)).current;  // Animação para fade in
 
   const perguntas = [
     {
@@ -67,10 +71,8 @@ export default function Questionario() {
       opcoes: ['Sim, sempre', 'Às vezes', 'Não'],
     },
   ];
-  
-  const handleGoToDashboard = () => {
-    router.push('/dashboard'); // Navega para a dashboard
-  };
+
+  // Função para responder às perguntas
   const responder = (perguntaId, opcao) => {
     setRespostas((prev) => ({
       ...prev,
@@ -78,104 +80,159 @@ export default function Questionario() {
     }));
   };
 
+  // Função para avançar para as próximas perguntas
+  const avancarPerguntas = () => {
+    // Incrementar o índice de página e adicionar 2 novas perguntas visíveis
+    if (pageIndex + 2 < perguntas.length) {
+      setPageIndex(pageIndex + 2);
+      setVisibleQuestions([pageIndex + 2, pageIndex + 3]);
+      
+      // Animar o fade in
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  // Função para enviar as respostas
   const enviarRespostas = () => {
     console.log('Respostas enviadas:', respostas);
     Alert.alert('Obrigado!', 'Suas respostas foram enviadas com sucesso.');
   };
+
+  useEffect(() => {
+    // Inicializa o fade-in ao carregar as perguntas
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-    {/* Botão Voltar para Dashboard */}
-    <TouchableOpacity 
-      style={styles.dashboardButton} 
-      onPress={handleGoToDashboard}
-    >
-      <Ionicons name="home" size={30} color="#097d4c" style={{ marginLeft: 75 }} />
-      <Text style={styles.dashboardButtonText}>Voltar para Dashboard</Text>
-    </TouchableOpacity>
-    <ScrollView contentContainerStyle={styles.container}>
+      {/* Botão Voltar para Dashboard */}
+      <TouchableOpacity style={styles.dashboardButton} onPress={() => router.push('/dashboard')}>
+        <Ionicons name="home" size={30} color="#097d4c" />
+      </TouchableOpacity>
+
       <Text style={styles.titulo}>Questionário de Rotina</Text>
 
-      {perguntas.map((pergunta) => (
-        <View key={pergunta.id} style={styles.blocoPergunta}>
-          <Text style={styles.pergunta}>{pergunta.texto}</Text>
-          <View style={styles.opcoesContainer}>
-            {pergunta.opcoes.map((opcao) => (
-              <TouchableOpacity
-                key={opcao}
-                style={[
-                  styles.opcaoBotao,
-                  respostas[pergunta.id] === opcao && styles.opcaoSelecionada,
-                ]}
-                onPress={() => responder(pergunta.id, opcao)}
-              >
-                <Text
-                  style={[
-                    styles.opcaoTexto,
-                    respostas[pergunta.id] === opcao && styles.opcaoTextoSelecionado,
-                  ]}
-                >
-                  {opcao}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      ))}
+      {/* Exibe as perguntas com animação de fade-in */}
+      {visibleQuestions.map((index) => {
+        const pergunta = perguntas[index];
+        if (!pergunta) return null; // Verifica se a pergunta existe antes de renderizar
+        return (
+          <Animated.View key={pergunta.id} style={{ opacity: fadeAnim }}>
+            <View style={styles.blocoPergunta}>
+              <Text style={styles.pergunta}>{pergunta.texto}</Text>
+              <View style={styles.opcoesContainer}>
+                {pergunta.opcoes.map((opcao) => (
+                  <TouchableOpacity
+                    key={opcao}
+                    style={[
+                      styles.opcaoBotao,
+                      respostas[pergunta.id] === opcao && styles.opcaoSelecionada,
+                    ]}
+                    onPress={() => responder(pergunta.id, opcao)}
+                  >
+                    <Text
+                      style={[
+                        styles.opcaoTexto,
+                        respostas[pergunta.id] === opcao && styles.opcaoTextoSelecionado,
+                      ]}
+                    >
+                      {opcao}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Animated.View>
+        );
+      })}
 
-      <TouchableOpacity style={styles.botaoEnviar} onPress={enviarRespostas}>
-        <Text style={styles.botaoTexto}>Enviar</Text>
+      {/* Condicionalmente exibe o botão "Próximo" ou "Enviar" */}
+      <TouchableOpacity
+        style={styles.botaoEnviar}
+        onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : enviarRespostas}
+      >
+        <Text style={styles.botaoTexto}>
+          {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Enviar'}
+        </Text>
       </TouchableOpacity>
-    </ScrollView>
     </ScrollView>
   );
 }
 
-
 const styles = StyleSheet.create({
+  dashboardButton: {
+    position: 'absolute',
+    top: 30,
+    left: 20,
+    backgroundColor: 'transparent',
+    padding: 10,
+    zIndex: 100,
+  },
   dashboardButtonText: {
-    color: '#097d4c',       // Cor verde do Healthify
-    fontSize: 16,           // Tamanho médio
-    fontWeight: '600',      // Semi-bold
-    marginLeft: 8,          // Espaço entre ícone e texto
-    fontFamily: 'Arial',   // Fonte clean (certifique-se de carregar a fonte)
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   container: {
     paddingVertical: 40,
     paddingHorizontal: 20,
-    backgroundColor: '#f6eecf',
+    backgroundColor: '#f6eecf',  // Cor de fundo bege
     alignItems: 'center',
+    flexGrow: 1,  // Garante que a página ocupe toda a altura da tela
+    position: 'relative',
   },
   titulo: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#097d4c',
-    marginBottom: 20,
+    marginBottom: 30,
     textAlign: 'center',
   },
   blocoPergunta: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: '#fff',  // Fundo branco para as perguntas
+    borderRadius: 15,  // Borda arredondada
+    shadowColor: '#000',  // Sombra para dar um efeito de elevação
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   pergunta: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 10,
+    marginBottom: 15,
     color: '#097d4c',
   },
   opcoesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+    justifyContent: 'center',
   },
   opcaoBotao: {
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#097d4c',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
     borderRadius: 10,
-    marginRight: 10,
-    marginBottom: 10,
+    marginBottom: 15,
+    flexBasis: '45%',  // Ajusta o tamanho dos botões
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   opcaoSelecionada: {
     backgroundColor: '#097d4c',
@@ -190,13 +247,13 @@ const styles = StyleSheet.create({
   botaoEnviar: {
     backgroundColor: '#097d4c',
     paddingVertical: 12,
-    paddingHorizontal: 30,
+    paddingHorizontal: 40,
     borderRadius: 10,
     marginTop: 30,
   },
   botaoTexto: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
 });
