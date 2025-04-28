@@ -36,13 +36,13 @@ export default function IndexScreen() {
   const validateEmail = (email) => {
     return email.includes('@') && email.includes('.');
   };
+  
   const formatDateToISO = (inputDate) => {
     if (!inputDate) return '';
     const [day, month, year] = inputDate.split('-');
     if (!day || !month || !year) return '';
     return `${year}-${month}-${day}`;
   };
-
 
   const handleRegister = async () => {
     if (!validateEmail(email)) {
@@ -97,14 +97,14 @@ export default function IndexScreen() {
       const dadosComplementares = isNutricionista
         ? { usuarioId, especialidade, descricao }
         : {
-          usuarioId,
-          peso: parseFloat(peso),
-          altura: parseFloat(altura),
-          objetivo,
-          nivelAtividade,
-          preferenciasAlimentares,
-          doencasPreexistentes
-        };
+            usuarioId,
+            peso: parseFloat(peso),
+            altura: parseFloat(altura),
+            objetivo,
+            nivelAtividade,
+            preferenciasAlimentares,
+            doencasPreexistentes
+          };
 
       const endpoint = isNutricionista ? 'Nutricionistas' : 'Clientes';
       const complementoResponse = await fetch(`http://localhost:5036/api/${endpoint}`, {
@@ -196,29 +196,38 @@ export default function IndexScreen() {
         {isRegistering && (
           <>
             <TextInput style={styles.input} placeholder="Confirmar Senha" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
-            <TextInput style={styles.input} placeholder="Nome" value={nome} onChangeText={setNome} />
-            <TextInput style={styles.input} placeholder="CPF" value={cpf} onChangeText={setCpf} keyboardType="numeric" />
-            <TextInput style={styles.input} placeholder="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
-            <TextInput style={styles.input} placeholder="Endereço" value={endereco} onChangeText={setEndereco} />
-            <TextInput
-              style={styles.input}
-              placeholder="Data de Nascimento (DD-MM-YYYY)"
-              value={dataNascimento}
-              onChangeText={setDataNascimento}
-              keyboardType="numeric"
-            />
 
+            <View style={styles.rowContainer}>
+              <TextInput style={styles.halfInput} placeholder="Nome" value={nome} onChangeText={setNome} />
+              <TextInput style={styles.halfInput} placeholder="CPF" value={cpf} onChangeText={setCpf} keyboardType="numeric" />
+            </View>
 
-            <Picker
-              selectedValue={sexo}
-              onValueChange={(itemValue) => setSexo(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Selecione o sexo" value="" />
-              <Picker.Item label="Masculino" value="Masculino" />
-              <Picker.Item label="Feminino" value="Feminino" />
-              <Picker.Item label="Outro" value="Outro" />
-            </Picker>
+            <View style={styles.rowContainer}>
+              <TextInput style={styles.halfInput} placeholder="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" />
+              <TextInput style={styles.halfInput} placeholder="Endereço" value={endereco} onChangeText={setEndereco} />
+            </View>
+
+            <View style={styles.rowContainer}>
+              <TextInput
+                style={styles.halfInput}
+                placeholder="Data de Nascimento (DD-MM-YYYY)"
+                value={dataNascimento}
+                onChangeText={setDataNascimento}
+                keyboardType="numeric"
+              />
+              <View style={[styles.halfInput, { paddingHorizontal: 0, paddingVertical: 0 }]}>
+                <Picker
+                  selectedValue={sexo}
+                  onValueChange={(itemValue) => setSexo(itemValue)}
+                  style={{ flex: 1 }}
+                >
+                  <Picker.Item label="Selecione o sexo" value="" />
+                  <Picker.Item label="Masculino" value="Masculino" />
+                  <Picker.Item label="Feminino" value="Feminino" />
+                  <Picker.Item label="Outro" value="Outro" />
+                </Picker>
+              </View>
+            </View>
 
             {isNutricionista ? (
               <>
@@ -227,20 +236,26 @@ export default function IndexScreen() {
               </>
             ) : (
               <>
-                <TextInput style={styles.input} placeholder="Peso (kg)" value={peso} onChangeText={setPeso} keyboardType="numeric" />
-                <TextInput style={styles.input} placeholder="Altura (cm)" value={altura} onChangeText={setAltura} keyboardType="numeric" />
+                <View style={styles.rowContainer}>
+                  <TextInput style={styles.halfInput} placeholder="Peso (kg)" value={peso} onChangeText={setPeso} keyboardType="numeric" />
+                  <TextInput style={styles.halfInput} placeholder="Altura (cm)" value={altura} onChangeText={setAltura} keyboardType="numeric" />
+                </View>
+
                 <TextInput style={styles.input} placeholder="Objetivo" value={objetivo} onChangeText={setObjetivo} />
-                <Picker
-                  selectedValue={nivelAtividade}
-                  onValueChange={(itemValue) => setNivelAtividade(itemValue)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Selecione o nível de atividade" value="" />
-                  <Picker.Item label="Sedentário" value="Sedentário" />
-                  <Picker.Item label="Levemente ativo" value="Levemente ativo" />
-                  <Picker.Item label="Moderadamente ativo" value="Moderadamente ativo" />
-                  <Picker.Item label="Muito ativo" value="Muito ativo" />
-                </Picker>
+
+                <View style={styles.input}>
+                  <Picker
+                    selectedValue={nivelAtividade}
+                    onValueChange={(itemValue) => setNivelAtividade(itemValue)}
+                    style={{ flex: 1 }}
+                  >
+                    <Picker.Item label="Selecione o nível de atividade" value="" />
+                    <Picker.Item label="Sedentário" value="Sedentário" />
+                    <Picker.Item label="Levemente ativo" value="Levemente ativo" />
+                    <Picker.Item label="Moderadamente ativo" value="Moderadamente ativo" />
+                    <Picker.Item label="Muito ativo" value="Muito ativo" />
+                  </Picker>
+                </View>
 
                 <TextInput style={styles.input} placeholder="Preferências Alimentares" value={preferenciasAlimentares} onChangeText={setPreferenciasAlimentares} />
                 <TextInput style={styles.input} placeholder="Doenças Preexistentes" value={doencasPreexistentes} onChangeText={setDoencasPreexistentes} />
@@ -267,7 +282,22 @@ export default function IndexScreen() {
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
+  rowContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  halfInput: {
+    width: '48%',
+    height: 50,
+    borderColor: '#097d4c',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+  },
   container: {
     flexGrow: 1,
     backgroundColor: '#f6eecf',
@@ -320,12 +350,11 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 50,
+    width: '100%',
     borderColor: '#097d4c',
     borderWidth: 1,
     borderRadius: 10,
-    marginBottom: 10,
     backgroundColor: '#fff',
-    justifyContent: 'center',
   },
   checkboxContainer: {
     flexDirection: 'row',
