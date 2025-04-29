@@ -61,18 +61,24 @@ export default function VerConsulta() {
 
   const handleDayPress = (day) => {
     setSelectedDate(day.dateString);
-    setModalVisible(true); // agora ao clicar no dia, abre o modal de consultas
+    setNewConsulta(prev => ({
+      ...prev,
+      DataConsulta: day.dateString, // já coloca a data selecionada no newConsulta
+    }));
+    setModalVisible(true);
   };
+  
 
   const handleCreateConsulta = async () => {
     const payload = {
       clienteId: parseInt(newConsulta.ClienteId),
       nutricionistaId: parseInt(newConsulta.NutricionistaId),
-      dataConsulta: newConsulta.DataConsulta,
+      dataConsulta: new Date(newConsulta.DataConsulta).toISOString(), // <- aqui!
       tipoConsulta: newConsulta.TipoConsulta,
       status: newConsulta.Status,
       observacoes: newConsulta.Observacoes,
     };
+    
 
     try {
       const response = await fetch('http://localhost:5036/api/Consultas', {
@@ -155,71 +161,93 @@ export default function VerConsulta() {
 
 
 
-        <Pressable style={styles.createButton} onPress={() => setIsCreating(true)}>
+        <Pressable
+          style={styles.createButton}
+          onPress={() => {
+            if (!selectedDate) {
+              alert("Selecione um dia no calendário primeiro!");
+              return;
+            }
+            setIsCreating(true);
+          }}
+        >
           <Text style={styles.createButtonText}>Nova Consulta</Text>
         </Pressable>
+
       </View>
 
       {/* Modal de criação */}
-      <Modal visible={isCreating} animationType="slide" transparent={true} onRequestClose={() => setIsCreating(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Criar Nova Consulta</Text>
+<Modal visible={isCreating} animationType="slide" transparent={true} onRequestClose={() => setIsCreating(false)}>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalContent}>
+      <Text style={styles.modalTitle}>Criar Nova Consulta</Text>
 
-            <TextInput
-              style={styles.textInput}
-              placeholder="Cliente Id"
-              keyboardType="numeric"
-              value={newConsulta.ClienteId}
-              onChangeText={(text) => setNewConsulta({ ...newConsulta, ClienteId: text })}
-            />
+      <TextInput
+        style={[styles.textInput, { backgroundColor: '#eee' }]}
+        value={newConsulta.DataConsulta}
+        editable={false}
+        placeholder="Data da Consulta"
+      />
 
-            <TextInput
-              style={styles.textInput}
-              placeholder="Nutricionista Id"
-              keyboardType="numeric"
-              value={newConsulta.NutricionistaId}
-              onChangeText={(text) => setNewConsulta({ ...newConsulta, NutricionistaId: text })}
-            />
+      <TextInput
+        style={styles.textInput}
+        placeholder="Cliente Id"
+        keyboardType="numeric"
+        value={newConsulta.ClienteId}
+        onChangeText={(text) => setNewConsulta({ ...newConsulta, ClienteId: text })}
+      />
 
-            <Text style={styles.pickerLabel}>Tipo de Consulta</Text>
-            <Picker
-              selectedValue={newConsulta.TipoConsulta}
-              style={styles.picker}
-              onValueChange={(itemValue) => setNewConsulta({ ...newConsulta, TipoConsulta: itemValue })}
-            >
-              <Picker.Item label="Online" value="Online" />
-              <Picker.Item label="Presencial" value="Presencial" />
-            </Picker>
+      <TextInput
+        style={styles.textInput}
+        placeholder="Nutricionista Id"
+        keyboardType="numeric"
+        value={newConsulta.NutricionistaId}
+        onChangeText={(text) => setNewConsulta({ ...newConsulta, NutricionistaId: text })}
+      />
 
-            <Text style={styles.pickerLabel}>Status</Text>
-            <Picker
-              selectedValue={newConsulta.Status}
-              style={styles.picker}
-              onValueChange={(itemValue) => setNewConsulta({ ...newConsulta, Status: itemValue })}
-            >
-              <Picker.Item label="Agendada" value="Agendada" />
-              <Picker.Item label="Concluída" value="Concluída" />
-              <Picker.Item label="Cancelada" value="Cancelada" />
-            </Picker>
+      <Text style={styles.pickerLabel}>Tipo de Consulta</Text>
+      <Picker
+        selectedValue={newConsulta.TipoConsulta}
+        style={styles.picker}
+        onValueChange={(itemValue) => setNewConsulta({ ...newConsulta, TipoConsulta: itemValue })}
+      >
+        <Picker.Item label="Online" value="Online" />
+        <Picker.Item label="Presencial" value="Presencial" />
+      </Picker>
 
-            <TextInput
-              style={styles.textInput}
-              placeholder="Observações"
-              value={newConsulta.Observacoes}
-              onChangeText={(text) => setNewConsulta({ ...newConsulta, Observacoes: text })}
-            />
+      <Text style={styles.pickerLabel}>Status</Text>
+      <Picker
+        selectedValue={newConsulta.Status}
+        style={styles.picker}
+        onValueChange={(itemValue) => setNewConsulta({ ...newConsulta, Status: itemValue })}
+      >
+        <Picker.Item label="Agendada" value="Agendada" />
+        <Picker.Item label="Concluída" value="Concluída" />
+        <Picker.Item label="Cancelada" value="Cancelada" />
+      </Picker>
 
-            <Pressable style={styles.button} onPress={handleCreateConsulta}>
-              <Text style={styles.buttonText}>Criar Consulta</Text>
-            </Pressable>
+      <TextInput
+        style={styles.textInput}
+        placeholder="Observações"
+        value={newConsulta.Observacoes}
+        onChangeText={(text) => setNewConsulta({ ...newConsulta, Observacoes: text })}
+      />
 
-            <Pressable style={styles.fecharButton} onPress={() => setIsCreating(false)}>
-              <Text style={styles.fecharText}>Fechar</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      {/* Botões Criar e Cancelar */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+        <Pressable style={[styles.button, { flex: 1, marginRight: 5 }]} onPress={handleCreateConsulta}>
+          <Text style={styles.buttonText}>Criar Consulta</Text>
+        </Pressable>
+
+        <Pressable style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]} onPress={() => setIsCreating(false)}>
+          <Text style={styles.cancelButtonText}>Cancelar</Text>
+        </Pressable>
+      </View>
+
+    </View>
+  </View>
+</Modal>
+
 
       {/* Modal de Consultas do Dia */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
@@ -231,6 +259,7 @@ export default function VerConsulta() {
               keyExtractor={(item) => item.consultaId.toString()}
               renderItem={({ item }) => (
                 <View style={styles.consultaItem}>
+                  <Text style={styles.modalText}>Tipo: {item.tipoConsulta}</Text>
                   <Text style={styles.modalText}>Tipo: {item.tipoConsulta}</Text>
                   <Text style={styles.modalText}>Status: {item.status}</Text>
                   <Text style={styles.modalText}>Observações: {item.observacoes}</Text>
@@ -432,4 +461,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  cancelButton: {
+    marginTop: 15,
+    backgroundColor: '#d9534f', // cor vermelha de "Cancelar"
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  
 });

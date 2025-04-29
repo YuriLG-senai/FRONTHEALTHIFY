@@ -23,6 +23,7 @@ export default function VerClientes() {
     try {
       const response = await fetch('http://localhost:5036/api/Clientes');
       const data = await response.json();
+      console.log('Clientes:', data);
       setClientes(data);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
@@ -66,37 +67,36 @@ export default function VerClientes() {
           <ActivityIndicator size="large" color="#097d4c" />
         ) : (
           <FlatList
-            data={clientes}
-            keyExtractor={(item) => item.clienteId.toString()}
-            renderItem={({ item }) => (
-                <View style={styles.clienteCard}>
-                <Text style={styles.clienteNome}>{item.usuario?.nome}</Text>
-                <Text style={styles.clienteInfo}>Email: {item.usuario?.email}</Text>
-                <Text style={styles.clienteInfo}>CPF: {item.usuario?.cpf}</Text>
-              
-                <View style={styles.actions}>
-                <Pressable
-                    style={styles.botaoDetalhes}
-                    onPress={() => {
-                        setClienteSelecionado(item);
-                        setModalVisible(true);
-                    }}
-                    >
-                    <Text style={styles.textoBotao}>Ver Detalhes</Text>
-                </Pressable>
+  data={clientes}
+  keyExtractor={(item) => item.clienteId.toString()}
+  renderItem={({ item }) => (
+    <View style={styles.clienteCard}>
+      <Text style={styles.clienteNome}>{item.nome}</Text> {/* Modificado */}
+      <Text style={styles.clienteInfo}>Email: {item.email}</Text> {/* Modificado */}
+      <Text style={styles.clienteInfo}>CPF: {item.cpf}</Text> {/* Modificado */}
 
-              
-                  <Pressable
-                    style={styles.botaoEditar}
-                    onPress={() => router.push(`/editar-cliente/${item.clienteId}`)}
-                  >
-                    <Text style={styles.textoBotao}>Editar</Text>
-                  </Pressable>
-                </View>
-              </View>
-              
-            )}
-          />
+      <View style={styles.actions}>
+        <Pressable
+          style={styles.botaoDetalhes}
+          onPress={() => {
+            setClienteSelecionado(item);
+            setModalVisible(true);
+          }}
+        >
+          <Text style={styles.textoBotao}>Ver Detalhes</Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.botaoEditar}
+          onPress={() => router.push(`/editar-cliente/${item.clienteId}`)}
+        >
+          <Text style={styles.textoBotao}>Editar</Text>
+        </Pressable>
+      </View>
+    </View>
+  )}
+/>
+
           
         )}
         {clienteSelecionado && (
@@ -108,26 +108,12 @@ export default function VerClientes() {
   >
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.modalTitulo}>{clienteSelecionado.usuario?.nome}</Text>
-
-          <Text style={styles.modalTexto}>Email: {clienteSelecionado.usuario?.email}</Text>
-          <Text style={styles.modalTexto}>CPF: {clienteSelecionado.usuario?.cpf}</Text>
-          <Text style={styles.modalTexto}>Telefone: {clienteSelecionado.usuario?.telefone}</Text>
-          <Text style={styles.modalTexto}>Endereço: {clienteSelecionado.usuario?.endereco}</Text>
-          <Text style={styles.modalTexto}>Data de Nascimento: {new Date(clienteSelecionado.usuario?.dataNascimento).toLocaleDateString()}</Text>
-          <Text style={styles.modalTexto}>Sexo: {clienteSelecionado.usuario?.sexo}</Text>
-
-          <View style={{ height: 1, backgroundColor: '#ccc', marginVertical: 10 }} />
-
-          <Text style={[styles.modalTexto, { fontWeight: 'bold', marginBottom: 5 }]}>Informações de Saúde</Text>
-          <Text style={styles.modalTexto}>Peso: {clienteSelecionado.peso} kg</Text>
-          <Text style={styles.modalTexto}>Altura: {clienteSelecionado.altura} m</Text>
-          <Text style={styles.modalTexto}>Objetivo: {clienteSelecionado.objetivo}</Text>
-          <Text style={styles.modalTexto}>Nível de Atividade: {clienteSelecionado.nivelAtividade}</Text>
-          <Text style={styles.modalTexto}>Preferências Alimentares: {clienteSelecionado.preferenciasAlimentares}</Text>
-          <Text style={styles.modalTexto}>Doenças Pré-existentes: {clienteSelecionado.doencasPreexistentes}</Text>
-        </ScrollView>
+        <Text style={styles.modalTitulo}>{clienteSelecionado.nome}</Text> 
+        <Text style={styles.modalTexto}>Email: {clienteSelecionado.email}</Text> 
+        <Text style={styles.modalTexto}>CPF: {clienteSelecionado.cpf}</Text> 
+        <Text style={styles.modalTexto}>Telefone: {clienteSelecionado.telefone}</Text> 
+        <Text style={styles.modalTexto}>Endereço: {clienteSelecionado.endereco}</Text> 
+        {/* Adicione mais campos conforme necessário */}
 
         <Pressable
           style={styles.botaoFechar}
@@ -139,6 +125,7 @@ export default function VerClientes() {
     </View>
   </Modal>
 )}
+
 
 
       </View>
