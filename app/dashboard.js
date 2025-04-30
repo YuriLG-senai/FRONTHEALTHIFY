@@ -16,7 +16,7 @@ export default function DashboardScreen() {
 
   // Definição de 'features' antes do useEffect
   const features = [
-    { icon: 'calendar-outline', label: 'Marcar Consulta', route: '/MarcarConsulta' },
+    { icon: 'calendar-outline', label: 'Consultar Disponibilidade', route: '/MarcarConsulta' },
     { icon: 'document-text-outline', label: 'Questionário', route: '/questionario' },
     { icon: 'restaurant-outline', label: 'Plano Alimentar', route: '/plano-alimentar' },
     { icon: 'barbell-outline', label: 'Treino', route: '/treino' },

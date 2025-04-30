@@ -55,7 +55,7 @@ CREATE TABLE Consultas (
     ConsultaId INT AUTO_INCREMENT PRIMARY KEY,
     ClienteId INT,
     NutricionistaId INT,
-    DataConsulta DATETIME NOT NULL,
+    DataConsulta TIMESTAMP NOT NULL,
     TipoConsulta ENUM('Online', 'Presencial') NOT NULL,
     Status ENUM('Agendada', 'Concluída', 'Cancelada') DEFAULT 'Agendada',
     Observacoes VARCHAR(500) NULL,
@@ -111,7 +111,29 @@ CREATE TABLE ProgressoCliente (
     FOREIGN KEY (ClienteId) REFERENCES Clientes(ClienteId)
 );
 
--- Create indexes
+INSERT INTO Usuarios (Nome, Email, senha, TipoUsuario, DataNascimento, Sexo, Telefone, Endereco, cpf)
+VALUES
+('Gustavo', 'gustavo.nutri@example.com', 'senha123', 'Nutricionista', '1986-05-10', 'Masculino', '11999990001', 'Rua A, 123', '11111111111'),
+('Yuri', 'yuri.nutri@example.com', 'senha123', 'Nutricionista', '1991-08-22', 'Masculino', '11999990002', 'Rua B, 456', '22222222222'),
+('Bernardo', 'bernardo.nutri@example.com', 'senha123', 'Nutricionista', '1988-12-05', 'Masculino', '11999990003', 'Rua C, 789', '33333333333');
+
+INSERT INTO Nutricionistas (UsuarioId, Especialidade, Descricao, FotoPerfil)
+VALUES
+((SELECT UsuarioId FROM Usuarios WHERE Email = 'gustavo.nutri@example.com'), 'Emagrecimento', 'Especialista em emagrecimento saudável.', NULL),
+((SELECT UsuarioId FROM Usuarios WHERE Email = 'yuri.nutri@example.com'), 'Nutrição esportiva', 'Atua com atletas e planos de performance.', NULL),
+((SELECT UsuarioId FROM Usuarios WHERE Email = 'bernardo.nutri@example.com'), 'Reeducação alimentar', 'Foco em mudança de hábitos alimentares.', NULL);
+INSERT INTO Usuarios (Nome, Email, senha, TipoUsuario, DataNascimento, Sexo, Telefone, Endereco, cpf)
+VALUES
+('Camila Dias', 'camila.cliente@example.com', 'senha123', 'Cliente', '1994-03-15', 'Feminino', '11999991001', 'Av X, 100', '44444444444'),
+('Rafael Oliveira', 'rafael.cliente@example.com', 'senha123', 'Cliente', '1990-07-01', 'Masculino', '11999991002', 'Av Y, 200', '55555555555'),
+('Letícia Martins', 'leticia.cliente@example.com', 'senha123', 'Cliente', '2001-11-19', 'Feminino', '11999991003', 'Av Z, 300', '66666666666');
+
+-- Inserir dados na tabela Clientes
+INSERT INTO Clientes (UsuarioId, Peso, Altura, Objetivo, NivelAtividade, PreferenciasAlimentares, DoencasPreexistentes)
+VALUES
+((SELECT UsuarioId FROM Usuarios WHERE Email = 'camila.cliente@example.com'), 62.5, 1.67, 'Definição muscular', 'Levemente ativo', 'Vegetariana', 'Nenhuma'),
+((SELECT UsuarioId FROM Usuarios WHERE Email = 'rafael.cliente@example.com'), 80.0, 1.78, 'Perder gordura', 'Moderadamente ativo', 'Sem glúten', 'Nenhuma'),
+((SELECT UsuarioId FROM Usuarios WHERE Email = 'leticia.cliente@example.com'), 70.0, 1.70, 'Ganho de massa', 'Sedentário', 'Sem lactose', 'Asma');
 CREATE INDEX idx_cliente_email ON Usuarios(Email);
 CREATE INDEX idx_cliente_nome ON Usuarios(Nome);
 CREATE INDEX idx_progresso_cliente ON ProgressoCliente(ClienteId);
@@ -121,3 +143,4 @@ CREATE INDEX idx_consulta_data ON Consultas(DataConsulta);
 SELECT * FROM Usuarios;
 SELECT * FROM Clientes;
 SELECT * FROM Nutricionistas;
+SELECT * FROM Consultas;

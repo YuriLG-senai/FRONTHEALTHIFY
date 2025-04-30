@@ -1,17 +1,109 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
+import { format, zonedTimeToUtc } from 'date-fns-tz';
 
 export default function ConsultarDisponibilidade() {
   const router = useRouter();
-
   const [selectedDate, setSelectedDate] = useState(null);
+  const [markedDates, setMarkedDates] = useState({});
+  const [horariosOcupados, setHorariosOcupados] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [nutricionistaId, setNutricionistaId] = useState(1); // Definindo o ID do nutricionista
 
-  // Função para lidar com a seleção de uma data
+  useEffect(() => {
+    // Chama a função que busca os dias ocupados ao carregar o componente
+    fetchDiasOcupados(nutricionistaId);
+  }, [nutricionistaId]);
+
+  const fetchDiasOcupados = async (id) => {
+    try {
+      const response = await fetch(`http://SEU_BACKEND/api/consultas/dias-indisponiveis/${id}`);
+      const dias = await response.json();
+
+      const datasMarcadas = {};
+      dias.forEach(dia => {
+        datasMarcadas[dia] = {
+          marked: true,
+          dotColor: 'red',
+        };
+      });
+
+      setMarkedDates(datasMarcadas);
+    } catch (error) {
+      console.error('Erro ao buscar dias ocupados:', error);
+    }
+  };
+
+  const fetchHorariosOcupados = async (data) => {
+    if (!nutricionistaId) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`http://SEU_BACKEND/api/consultas/horarios-ocupados/${nutricionistaId}?data=${data}`);
+      const horarios = await response.json();
+      setHorariosOcupados(horarios);
+    } catch (error) {
+      console.error('Erro ao buscar horários ocupados:', error);
+      setHorariosOcupados([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDateSelect = (day) => {
-    setSelectedDate(day.dateString);
+    const dataSelecionada = day.dateString;
+    setSelectedDate(dataSelecionada);
+    fetchHorariosOcupados(dataSelecionada);
+
+    const newMarked = { ...markedDates };
+    Object.keys(newMarked).forEach(key => {
+      if (newMarked[key]?.selected) delete newMarked[key].selected;
+    });
+
+    newMarked[dataSelecionada] = {
+      ...(newMarked[dataSelecionada] || {}),
+      selected: true,
+      selectedColor: '#097d4c',
+      selectedTextColor: '#fff',
+    };
+
+    setMarkedDates(newMarked);
+  };
+
+  const handleTimeSelect = (hour) => {
+    // Definir o fuso horário local
+    const timeZone = 'America/Sao_Paulo';
+
+    // Criar a string de data e hora usando o horário selecionado
+    const dateTimeLocal = `${selectedDate} ${hour}`;
+
+    // Converter a hora local para UTC com o fuso horário correto
+    const dateTimeUtc = zonedTimeToUtc(dateTimeLocal, timeZone);
+
+    // Formatar para o formato correto (YYYY-MM-DD HH:mm:00)
+    const dateTimeFormatted = format(dateTimeUtc, 'yyyy-MM-dd HH:mm:ss');
+
+    console.log('Data e hora enviada para o backend:', dateTimeFormatted);
+
+    // Enviar para o backend
+    fetch("http://SEU_BACKEND/api/consultas", {
+        method: "POST",
+        body: JSON.stringify({
+            // Aqui você envia o horário no formato local correto
+            dataConsulta: dateTimeFormatted,
+            nutricionistaId: nutricionistaId
+        }),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Lógica após o envio do horário
+    })
+    .catch(error => console.error("Erro ao enviar consulta:", error));
   };
 
   return (
@@ -22,32 +114,30 @@ export default function ConsultarDisponibilidade() {
       </TouchableOpacity>
 
       <Text style={styles.title}>Consultar Disponibilidade</Text>
-      <Text style={styles.subtitle}>Escolha uma data para ver os horários disponíveis.</Text>
+      <Text style={styles.subtitle}>Escolha uma data para ver os horários ocupados.</Text>
 
-      {/* Calendário interativo */}
       <Calendar
-        markedDates={{
-          [selectedDate]: {
-            selected: true,
-            selectedColor: '#097d4c',
-            selectedTextColor: '#fff',
-          },
-        }}
+        markedDates={markedDates}
         onDayPress={handleDateSelect}
         monthFormat={'yyyy MM'}
         style={styles.calendar}
       />
 
-      {/* Card informativo sobre horários */}
       {selectedDate && (
         <View style={styles.card}>
           <Ionicons name="time" size={64} color="#097d4c" />
-          <Text style={styles.cardText}>
-            Horários disponíveis para {selectedDate}:
-          </Text>
-          <Text style={styles.cardText}>09:00 - 10:00</Text>
-          <Text style={styles.cardText}>14:00 - 15:00</Text>
-          <Text style={styles.cardText}>16:00 - 17:00</Text>
+          <Text style={styles.cardText}>Horários ocupados em {selectedDate}:</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#097d4c" style={{ marginTop: 12 }} />
+          ) : horariosOcupados.length > 0 ? (
+            horariosOcupados.map((hora, index) => (
+              <TouchableOpacity key={index} onPress={() => handleTimeSelect(hora)}>
+                <Text style={styles.cardText}>{hora}</Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={styles.cardText}>Nenhum horário ocupado.</Text>
+          )}
         </View>
       )}
     </View>
