@@ -19,7 +19,7 @@ export default function VerConsulta() {
     TipoConsulta: 'Online',
     Status: 'Agendada',
     Observacoes: '',
-    HoraConsulta: '', // Adicionando a hora da consulta
+    HoraConsulta: '',
   });
 
   const router = useRouter();
@@ -67,16 +67,27 @@ export default function VerConsulta() {
     }));
   };
 
+  const isHorarioValido = (horario) => {
+    const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    return regex.test(horario);
+  };
+
   const handleCreateConsulta = async () => {
     if (!selectedTime) {
       alert('Selecione um horário para a consulta!');
       return;
     }
 
+    if (!isHorarioValido(selectedTime)) {
+      alert('Horário inválido! Use o formato HH:mm (ex: 14:30) e valores válidos.');
+      return;
+    }
+
     const payload = {
       clienteId: parseInt(newConsulta.ClienteId),
       nutricionistaId: parseInt(newConsulta.NutricionistaId),
-      dataConsulta: new Date(`${newConsulta.DataConsulta}T${selectedTime}`).toISOString(), // Incluindo hora
+      dataConsulta: new Date(`${newConsulta.DataConsulta}T00:00:00`).toISOString(),
+      horaConsulta: selectedTime,
       tipoConsulta: newConsulta.TipoConsulta,
       status: newConsulta.Status,
       observacoes: newConsulta.Observacoes,
@@ -96,6 +107,16 @@ export default function VerConsulta() {
         alert("Consulta criada com sucesso!");
         fetchConsultas();
         setIsCreating(false);
+        setSelectedTime('');
+        setNewConsulta({
+          ClienteId: '',
+          NutricionistaId: '',
+          DataConsulta: '',
+          TipoConsulta: 'Online',
+          Status: 'Agendada',
+          Observacoes: '',
+          HoraConsulta: '',
+        });
       } else {
         alert(`Erro ao criar consulta: ${responseText}`);
       }
@@ -166,14 +187,13 @@ export default function VerConsulta() {
               return;
             }
             setIsCreating(true);
-            setModalVisible(false); // Garante que o outro modal feche
+            setModalVisible(false);
           }}
         >
           <Text style={styles.createButtonText}>Nova Consulta</Text>
         </Pressable>
       </View>
 
-      {/* Modal de criação */}
       <Modal visible={isCreating} animationType="slide" transparent={true} onRequestClose={() => setIsCreating(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -219,15 +239,38 @@ export default function VerConsulta() {
             </Picker>
 
             <Text style={styles.pickerLabel}>Horário</Text>
-            <Picker
-              selectedValue={selectedTime}
-              style={styles.picker}
-              onValueChange={(itemValue) => setSelectedTime(itemValue)}
-            >
-              <Picker.Item label="09:00 - 10:00" value="09:00" />
-              <Picker.Item label="14:00 - 15:00" value="14:00" />
-              <Picker.Item label="16:00 - 17:00" value="16:00" />
-            </Picker>
+            <View style={styles.timeContainer}>
+              <TextInput
+                style={styles.timeInput}
+                placeholder="HH"
+                keyboardType="numeric"
+                maxLength={2}
+                value={selectedTime.split(':')[0] || ''}
+                onChangeText={(text) => {
+                  const hora = text.replace(/\D/g, '').slice(0, 2);
+                  const minutos = selectedTime.split(':')[1] || '00';
+                  if (parseInt(hora) <= 23 || hora === '') {
+                    setSelectedTime(`${hora}:${minutos}`);
+                  }
+                }}
+              />
+              <Text style={styles.timeSeparator}>:</Text>
+              <TextInput
+                style={styles.timeInput}
+                placeholder="mm"
+                keyboardType="numeric"
+                maxLength={2}
+                value={selectedTime.split(':')[1] || ''}
+                onChangeText={(text) => {
+                  const minutos = text.replace(/\D/g, '').slice(0, 2);
+                  const hora = selectedTime.split(':')[0] || '00';
+                  if (parseInt(minutos) <= 59 || minutos === '') {
+                    setSelectedTime(`${hora}:${minutos}`);
+                  }
+                }}
+              />
+            </View>
+
 
             <TextInput
               style={styles.textInput}
@@ -248,7 +291,6 @@ export default function VerConsulta() {
         </View>
       </Modal>
 
-      {/* Modal de Consultas do Dia */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -261,7 +303,7 @@ export default function VerConsulta() {
                   <Text style={styles.modalText}>Tipo: {item.tipoConsulta}</Text>
                   <Text style={styles.modalText}>Status: {item.status}</Text>
                   <Text style={styles.modalText}>Observações: {item.observacoes}</Text>
-                  <Text style={styles.modalText}>Horário: {new Date(item.dataConsulta).toLocaleTimeString()}</Text>
+                  <Text style={styles.modalText}>Horário: {item.horaConsulta || new Date(item.dataConsulta).toLocaleTimeString()}</Text>
                 </View>
               )}
             />
@@ -299,6 +341,27 @@ function MenuButton({ icon, label, onPress }) {
 }
 
 const styles = StyleSheet.create({
+  timeContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+  marginBottom: 15,
+},
+timeInput: {
+  width: 60,
+  height: 50,
+  borderColor: '#ccc',
+  borderWidth: 1,
+  borderRadius: 8,
+  paddingLeft: 10,
+  fontSize: 16,
+},
+timeSeparator: {
+  fontSize: 20,
+  fontWeight: 'bold',
+  marginHorizontal: 8,
+},
+
   container: {
     flex: 1,
     padding: 20,

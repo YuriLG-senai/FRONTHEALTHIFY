@@ -56,6 +56,7 @@ CREATE TABLE Consultas (
     ClienteId INT,
     NutricionistaId INT,
     DataConsulta TIMESTAMP NOT NULL,
+    HoraConsulta VARCHAR(5) NOT NULL,
     TipoConsulta ENUM('Online', 'Presencial') NOT NULL,
     Status ENUM('Agendada', 'Concluída', 'Cancelada') DEFAULT 'Agendada',
     Observacoes VARCHAR(500) NULL,

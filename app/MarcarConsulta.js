@@ -1,109 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
-import { format, zonedTimeToUtc } from 'date-fns-tz';
+import { format } from 'date-fns'; // Importa a função format para garantir o formato de data correto
 
 export default function ConsultarDisponibilidade() {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(null);
   const [markedDates, setMarkedDates] = useState({});
   const [horariosOcupados, setHorariosOcupados] = useState([]);
+  const [nutricionistaData, setNutricionistaData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [nutricionistaId, setNutricionistaId] = useState(1); // Definindo o ID do nutricionista
+  const [nutricionistaId] = useState(1);
 
   useEffect(() => {
-    // Chama a função que busca os dias ocupados ao carregar o componente
     fetchDiasOcupados(nutricionistaId);
   }, [nutricionistaId]);
 
   const fetchDiasOcupados = async (id) => {
     try {
-      const response = await fetch(`http://SEU_BACKEND/api/consultas/dias-indisponiveis/${id}`);
-      const dias = await response.json();
+      const res = await fetch(`http://localhost:5036/api/consultas/dias-indisponiveis/${id}`);
+      const dias = await res.json();
 
       const datasMarcadas = {};
       dias.forEach(dia => {
         datasMarcadas[dia] = {
           marked: true,
-          dotColor: 'red',
+          dotColor: '#cc3b3b',
         };
       });
 
       setMarkedDates(datasMarcadas);
-    } catch (error) {
-      console.error('Erro ao buscar dias ocupados:', error);
+    } catch (err) {
+      console.error('Erro ao buscar dias ocupados:', err);
     }
   };
 
   const fetchHorariosOcupados = async (data) => {
-    if (!nutricionistaId) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://SEU_BACKEND/api/consultas/horarios-ocupados/${nutricionistaId}?data=${data}`);
-      const horarios = await response.json();
+      // Formata a data no formato esperado pela API (YYYY-MM-DD)
+      const formattedDate = format(new Date(data), 'yyyy-MM-dd');
+
+      const res = await fetch(`http://localhost:5036/api/consultas/horarios-ocupados?data=${formattedDate}`);
+      const horarios = await res.json();
       setHorariosOcupados(horarios);
-    } catch (error) {
-      console.error('Erro ao buscar horários ocupados:', error);
+
+      // Verifique se o nutricionistaId está presente no primeiro item de horarios
+      if (horarios.length > 0 && horarios[0].nutricionistaId) {
+        fetchNutricionistaData(horarios[0].nutricionistaId);
+      } else {
+        console.error('Nutricionista ID não encontrado nos horários.');
+      }
+    } catch (err) {
+      console.error('Erro ao buscar horários:', err);
       setHorariosOcupados([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDateSelect = (day) => {
-    const dataSelecionada = day.dateString;
-    setSelectedDate(dataSelecionada);
-    fetchHorariosOcupados(dataSelecionada);
-
-    const newMarked = { ...markedDates };
-    Object.keys(newMarked).forEach(key => {
-      if (newMarked[key]?.selected) delete newMarked[key].selected;
-    });
-
-    newMarked[dataSelecionada] = {
-      ...(newMarked[dataSelecionada] || {}),
-      selected: true,
-      selectedColor: '#097d4c',
-      selectedTextColor: '#fff',
-    };
-
-    setMarkedDates(newMarked);
+  const fetchNutricionistaData = async (id) => {
+    if (!id) {
+      console.error('ID do nutricionista inválido');
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:5036/api/nutricionistas/${id}`);
+      const data = await res.json();
+      setNutricionistaData(data);
+    } catch (err) {
+      console.error('Erro ao buscar dados do nutricionista:', err);
+      setNutricionistaData(null);
+    }
   };
 
-  const handleTimeSelect = (hour) => {
-    // Definir o fuso horário local
-    const timeZone = 'America/Sao_Paulo';
+  const handleDateSelect = (day) => {
+    // Pega a data no formato YYYY-MM-DD
+    const date = day.dateString;
 
-    // Criar a string de data e hora usando o horário selecionado
-    const dateTimeLocal = `${selectedDate} ${hour}`;
+    // Envia a data no formato YYYY-MM-DD para a API
+    setSelectedDate(date);
+    fetchHorariosOcupados(date); // Passa a data formatada para a API
 
-    // Converter a hora local para UTC com o fuso horário correto
-    const dateTimeUtc = zonedTimeToUtc(dateTimeLocal, timeZone);
-
-    // Formatar para o formato correto (YYYY-MM-DD HH:mm:00)
-    const dateTimeFormatted = format(dateTimeUtc, 'yyyy-MM-dd HH:mm:ss');
-
-    console.log('Data e hora enviada para o backend:', dateTimeFormatted);
-
-    // Enviar para o backend
-    fetch("http://SEU_BACKEND/api/consultas", {
-        method: "POST",
-        body: JSON.stringify({
-            // Aqui você envia o horário no formato local correto
-            dataConsulta: dateTimeFormatted,
-            nutricionistaId: nutricionistaId
-        }),
-        headers: {
-            "Content-Type": "application/json"
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Lógica após o envio do horário
-    })
-    .catch(error => console.error("Erro ao enviar consulta:", error));
+    setMarkedDates(prev => ({
+      ...prev,
+      [date]: {
+        ...(prev[date] || {}),
+        selected: true,
+        selectedColor: '#097d4c',
+        selectedTextColor: '#fff'
+      }
+    }));
   };
 
   return (
@@ -113,32 +102,56 @@ export default function ConsultarDisponibilidade() {
         <Text style={styles.backText}>Voltar</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Consultar Disponibilidade</Text>
-      <Text style={styles.subtitle}>Escolha uma data para ver os horários ocupados.</Text>
+      <Text style={styles.title}>Quadro de Horários</Text>
+      <Text style={styles.subtitle}>Selecione uma data marcada para ver os horários.</Text>
 
       <Calendar
         markedDates={markedDates}
         onDayPress={handleDateSelect}
-        monthFormat={'yyyy MM'}
         style={styles.calendar}
+        theme={{
+          selectedDayBackgroundColor: '#097d4c',
+          todayTextColor: '#097d4c'
+        }}
       />
 
       {selectedDate && (
-        <View style={styles.card}>
-          <Ionicons name="time" size={64} color="#097d4c" />
-          <Text style={styles.cardText}>Horários ocupados em {selectedDate}:</Text>
+        <ScrollView contentContainerStyle={styles.scheduleContainer}>
+          <Text style={styles.scheduleTitle}>Consultas em {selectedDate}</Text>
           {loading ? (
-            <ActivityIndicator size="small" color="#097d4c" style={{ marginTop: 12 }} />
+            <ActivityIndicator color="#097d4c" size="large" />
           ) : horariosOcupados.length > 0 ? (
-            horariosOcupados.map((hora, index) => (
-              <TouchableOpacity key={index} onPress={() => handleTimeSelect(hora)}>
-                <Text style={styles.cardText}>{hora}</Text>
-              </TouchableOpacity>
-            ))
+            <>
+              {nutricionistaData && (
+                <View style={styles.nutricionistaCard}>
+                  <Text style={styles.nutriTitle}>Nutricionista:</Text>
+                  <Text style={styles.nutriName}>{nutricionistaData.nome}</Text>
+                  <Text style={styles.nutriSpecialty}>{nutricionistaData.especialidade}</Text>
+                </View>
+              )}
+              {horariosOcupados.map((item, idx) => (
+                <View key={idx} style={[styles.timeSlot, styles.occupied]}>
+                  <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
+                  <View>
+                    <Text style={[styles.timeText, { color: '#fff' }]}>
+                      Horário: {item.hora}
+                    </Text>
+                    <Text style={styles.nutriName}>
+                      Nutricionista: {item.nutricionistaNome}
+                    </Text>
+                    {item.nutricionistaTelefone && (
+                      <Text style={styles.nutriName}>
+                        Contato: {item.nutricionistaTelefone}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </>
           ) : (
-            <Text style={styles.cardText}>Nenhum horário ocupado.</Text>
+            <Text style={styles.emptyMessage}>Nenhuma consulta marcada neste dia.</Text>
           )}
-        </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -152,59 +165,89 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6eecf',
-    padding: 24,
-    alignItems: 'center',
+    padding: 20,
+    paddingTop: 40,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   backText: {
     marginLeft: 8,
-    color: '#097d4c',
     fontSize: 16,
-    fontWeight: '600',
+    color: '#097d4c',
+    fontWeight: 'bold',
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#097d4c',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 16,
     color: '#555',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   calendar: {
-    width: '100%',
     borderRadius: 10,
-    padding: 10,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 5,
+    overflow: 'hidden',
+    marginBottom: 20,
   },
-  card: {
-    backgroundColor: '#fff',
-    padding: 24,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 5,
-    marginTop: 30,
+  scheduleContainer: {
+    paddingBottom: 20,
   },
-  cardText: {
-    marginTop: 8,
-    fontSize: 16,
+  scheduleTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#333',
     textAlign: 'center',
+  },
+  timeSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginVertical: 6,
+    marginHorizontal: 12,
+    backgroundColor: '#cc3b3b',
+  },
+  occupied: {
+    backgroundColor: '#097d4c',
+  },
+  timeText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  nutriName: {
+    fontSize: 12,
+    color: '#f0f0f0',
+    fontStyle: 'italic',
+  },
+  nutriTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#097d4c',
+    marginBottom: 6,
+  },
+  nutriSpecialty: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 10,
+  },
+  nutricionistaCard: {
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: '#f0f0f0',
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  emptyMessage: {
+    textAlign: 'center',
+    marginTop: 10,
     color: '#333',
   },
 });
