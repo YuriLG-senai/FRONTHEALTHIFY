@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
-import { format } from 'date-fns'; // Importa a função format para garantir o formato de data correto
 
 export default function ConsultarDisponibilidade() {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(null);
   const [markedDates, setMarkedDates] = useState({});
+  const [diasIndisponiveis, setDiasIndisponiveis] = useState([]);
   const [horariosOcupados, setHorariosOcupados] = useState([]);
   const [nutricionistaData, setNutricionistaData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -20,41 +20,57 @@ export default function ConsultarDisponibilidade() {
 
   const fetchDiasOcupados = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5036/api/consultas/dias-indisponiveis/${id}`);
+      const res = await fetch('http://localhost:5036/api/consultas/dias-indisponiveis/' + id);
       const dias = await res.json();
 
-      const datasMarcadas = {};
-      dias.forEach(dia => {
-        datasMarcadas[dia] = {
-          marked: true,
-          dotColor: '#cc3b3b',
-        };
-      });
+      const datasFormatadas = dias.map(dia =>
+        dia.length === 10 ? dia : new Date(dia).toISOString().split('T')[0]
+      );
 
-      setMarkedDates(datasMarcadas);
+      setDiasIndisponiveis(datasFormatadas);
+      atualizarMarcacoes(selectedDate, datasFormatadas);
     } catch (err) {
       console.error('Erro ao buscar dias ocupados:', err);
     }
   };
 
+  const atualizarMarcacoes = (dataSelecionada, dias = diasIndisponiveis) => {
+    const novaMarcacao = {};
+
+    dias.forEach((dia) => {
+      if (dia !== dataSelecionada) {
+        novaMarcacao[dia] = {
+          marked: true,
+          dotColor: '#cc3b3b',
+        };
+      }
+    });
+
+    if (dataSelecionada) {
+      novaMarcacao[dataSelecionada] = {
+        selected: true,
+        selectedColor: '#097d4c',
+        selectedTextColor: '#fff',
+      };
+    }
+
+    setMarkedDates(novaMarcacao);
+  };
+
   const fetchHorariosOcupados = async (data) => {
     setLoading(true);
     try {
-      // Formata a data no formato esperado pela API (YYYY-MM-DD)
-      const formattedDate = format(new Date(data), 'yyyy-MM-dd');
-
-      const res = await fetch(`http://localhost:5036/api/consultas/horarios-ocupados?data=${formattedDate}`);
+      const res = await fetch('http://localhost:5036/api/consultas/horarios-ocupados?data=' + data);
       const horarios = await res.json();
       setHorariosOcupados(horarios);
 
-      // Verifique se o nutricionistaId está presente no primeiro item de horarios
       if (horarios.length > 0 && horarios[0].nutricionistaId) {
         fetchNutricionistaData(horarios[0].nutricionistaId);
       } else {
-        console.error('Nutricionista ID não encontrado nos horários.');
+        setNutricionistaData(null);
       }
-    } catch (err) {
-      console.error('Erro ao buscar horários:', err);
+    } catch (e) {
+      console.error('Erro ao buscar horários:', e);
       setHorariosOcupados([]);
     } finally {
       setLoading(false);
@@ -62,37 +78,21 @@ export default function ConsultarDisponibilidade() {
   };
 
   const fetchNutricionistaData = async (id) => {
-    if (!id) {
-      console.error('ID do nutricionista inválido');
-      return;
-    }
     try {
-      const res = await fetch(`http://localhost:5036/api/nutricionistas/${id}`);
+      const res = await fetch('http://localhost:5036/api/nutricionistas/' + id);
       const data = await res.json();
       setNutricionistaData(data);
-    } catch (err) {
-      console.error('Erro ao buscar dados do nutricionista:', err);
+    } catch (e) {
+      console.error('Erro ao buscar dados do nutricionista:', e);
       setNutricionistaData(null);
     }
   };
 
   const handleDateSelect = (day) => {
-    // Pega a data no formato YYYY-MM-DD
-    const date = day.dateString;
-
-    // Envia a data no formato YYYY-MM-DD para a API
-    setSelectedDate(date);
-    fetchHorariosOcupados(date); // Passa a data formatada para a API
-
-    setMarkedDates(prev => ({
-      ...prev,
-      [date]: {
-        ...(prev[date] || {}),
-        selected: true,
-        selectedColor: '#097d4c',
-        selectedTextColor: '#fff'
-      }
-    }));
+    const selected = day.dateString;
+    setSelectedDate(selected);
+    fetchHorariosOcupados(selected);
+    atualizarMarcacoes(selected);
   };
 
   return (
@@ -111,43 +111,31 @@ export default function ConsultarDisponibilidade() {
         style={styles.calendar}
         theme={{
           selectedDayBackgroundColor: '#097d4c',
-          todayTextColor: '#097d4c'
+          todayTextColor: '#097d4c',
+          arrowColor: '#097d4c',
+          monthTextColor: '#097d4c',
         }}
+        enableSwipeMonths
       />
 
       {selectedDate && (
         <ScrollView contentContainerStyle={styles.scheduleContainer}>
           <Text style={styles.scheduleTitle}>Consultas em {selectedDate}</Text>
           {loading ? (
-            <ActivityIndicator color="#097d4c" size="large" />
+            <ActivityIndicator size="large" color="#097d4c" />
           ) : horariosOcupados.length > 0 ? (
-            <>
-              {nutricionistaData && (
-                <View style={styles.nutricionistaCard}>
-                  <Text style={styles.nutriTitle}>Nutricionista:</Text>
-                  <Text style={styles.nutriName}>{nutricionistaData.nome}</Text>
-                  <Text style={styles.nutriSpecialty}>{nutricionistaData.especialidade}</Text>
+            horariosOcupados.map((item, idx) => (
+              <View key={idx} style={[styles.timeSlot, styles.occupied]}>
+                <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
+                <View>
+                  <Text style={[styles.timeText, { color: '#fff' }]}>Horário: {item.hora}</Text>
+                  <Text style={styles.nutriName}>Nutricionista: {item.nutricionistaNome}</Text>
+                  {item.nutricionistaTelefone && (
+                    <Text style={styles.nutriName}>Contato: {item.nutricionistaTelefone}</Text>
+                  )}
                 </View>
-              )}
-              {horariosOcupados.map((item, idx) => (
-                <View key={idx} style={[styles.timeSlot, styles.occupied]}>
-                  <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
-                  <View>
-                    <Text style={[styles.timeText, { color: '#fff' }]}>
-                      Horário: {item.hora}
-                    </Text>
-                    <Text style={styles.nutriName}>
-                      Nutricionista: {item.nutricionistaNome}
-                    </Text>
-                    {item.nutricionistaTelefone && (
-                      <Text style={styles.nutriName}>
-                        Contato: {item.nutricionistaTelefone}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </>
+              </View>
+            ))
           ) : (
             <Text style={styles.emptyMessage}>Nenhuma consulta marcada neste dia.</Text>
           )}
@@ -213,7 +201,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginVertical: 6,
     marginHorizontal: 12,
-    backgroundColor: '#cc3b3b',
   },
   occupied: {
     backgroundColor: '#097d4c',
@@ -226,24 +213,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#f0f0f0',
     fontStyle: 'italic',
-  },
-  nutriTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#097d4c',
-    marginBottom: 6,
-  },
-  nutriSpecialty: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 10,
-  },
-  nutricionistaCard: {
-    padding: 16,
-    borderRadius: 10,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 20,
-    alignItems: 'center',
   },
   emptyMessage: {
     textAlign: 'center',
