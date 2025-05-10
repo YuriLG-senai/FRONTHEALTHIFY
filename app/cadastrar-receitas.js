@@ -18,6 +18,17 @@ export default function CadastrarReceitas() {
   });
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
+  const [idDaReceitaEditando, setIdDaReceitaEditando] = useState(null);
+  const [nomeReceita, setNomeReceita] = useState('');
+  const [ingredientesReceita, setIngredientesReceita] = useState('');
+  const [instrucoesReceita, setInstrucoesReceita] = useState('');
+  const [caloriasReceita, setCaloriasReceita] = useState('');
+  const [categoriaReceita, setCategoriaReceita] = useState('');
+  const [tipoReceita, setTipoReceita] = useState('');
+  const [fotoReceita, setFotoReceita] = useState('');
+
+
+
 
 
   const router = useRouter();
@@ -69,18 +80,21 @@ export default function CadastrarReceitas() {
   
 
   const handleUpdateRecipe = async () => {
-    const receitaAtualizada = {
-        receitaId: idDaReceita, // ID da receita que será atualizada
+  const receitaAtualizada = {
+        receitaId: idDaReceitaEditando,
         nome: nomeReceita,
         ingredientes: ingredientesReceita,
         instrucoes: instrucoesReceita,
-        calorias: caloriasReceita,
-        categoria: categoriaReceita,
-        tipo: tipoReceita
+        caloriasPorPorcao: caloriasReceita !== "" ? caloriasReceita : null, // Garantir que o valor seja válido
+        categoria: categoriaReceita !== "" ? categoriaReceita : null,
+        tipo: tipoReceita !== "" ? tipoReceita : null,
+        fotoReceita: fotoReceita || null
     };
 
+    console.log('Dados enviados para o PUT:', receitaAtualizada);
+
     try {
-        const response = await fetch(`http://localhost:5036/api/receitas/${idDaReceita}`, {
+        const response = await fetch(`http://localhost:5036/api/receitas/${idDaReceitaEditando}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -89,11 +103,23 @@ export default function CadastrarReceitas() {
         });
 
         if (!response.ok) {
-            throw new Error('Falha ao atualizar receita');
+          const errorDetails = await response.json();
+          console.error('Erro ao atualizar receita:', errorDetails);
+          alert(`Erro: ${errorDetails.message || 'Falha ao atualizar receita'}`);
+          console.log('Dados da receita para atualização:', receitaAtualizada);
+          console.log('ID da receita sendo atualizada:', idDaReceitaEditando);
+
+          return;
+      }
+        
+
+        const text = await response.text();
+        if (text) {
+          const data = JSON.parse(text);
+          console.log('Receita atualizada:', data);
         }
 
-        const data = await response.json();
-        console.log('Receita atualizada:', data);
+        
         alert('Receita atualizada com sucesso!');
         setModalVisible(false); // Fechar o modal
         // Aqui você pode atualizar a lista de receitas no seu estado
@@ -160,6 +186,7 @@ export default function CadastrarReceitas() {
                     style={styles.botaoEditar}
                     onPress={() => {
                       setEditingRecipe(item);
+                      setIdDaReceitaEditando(item.receitaId); 
                       setEditModalVisible(true);
                     }}
                   >
