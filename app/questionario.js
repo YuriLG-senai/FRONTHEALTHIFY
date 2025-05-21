@@ -10,9 +10,9 @@ export const options = {
 export default function Questionario() {
   const router = useRouter();
   const [respostas, setRespostas] = useState({});
-  const [pageIndex, setPageIndex] = useState(0);  // Controla a página atual das perguntas
-  const [visibleQuestions, setVisibleQuestions] = useState([0, 1]);  // Controla quais perguntas são visíveis
-  const fadeAnim = useRef(new Animated.Value(0)).current;  // Animação para fade in
+  const [pageIndex, setPageIndex] = useState(0);  
+  const [visibleQuestions, setVisibleQuestions] = useState([0, 1]);  
+  const fadeAnim = useRef(new Animated.Value(0)).current;  
 
   const perguntas = [
     {
@@ -72,7 +72,7 @@ export default function Questionario() {
     },
   ];
 
-  // Função para responder às perguntas
+
   const responder = (perguntaId, opcao) => {
     setRespostas((prev) => ({
       ...prev,
@@ -80,14 +80,14 @@ export default function Questionario() {
     }));
   };
 
-  // Função para avançar para as próximas perguntas
+
   const avancarPerguntas = () => {
-    // Incrementar o índice de página e adicionar 2 novas perguntas visíveis
+
     if (pageIndex + 2 < perguntas.length) {
       setPageIndex(pageIndex + 2);
       setVisibleQuestions([pageIndex + 2, pageIndex + 3]);
       
-      // Animar o fade in
+
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
@@ -96,14 +96,13 @@ export default function Questionario() {
     }
   };
 
-  // Função para enviar as respostas
   const enviarRespostas = () => {
     console.log('Respostas enviadas:', respostas);
     Alert.alert('Obrigado!', 'Suas respostas foram enviadas com sucesso.');
   };
 
   useEffect(() => {
-    // Inicializa o fade-in ao carregar as perguntas
+
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -123,7 +122,7 @@ export default function Questionario() {
       {/* Exibe as perguntas com animação de fade-in */}
       {visibleQuestions.map((index) => {
         const pergunta = perguntas[index];
-        if (!pergunta) return null; // Verifica se a pergunta existe antes de renderizar
+        if (!pergunta) return null; 
         return (
           <Animated.View key={pergunta.id} style={{ opacity: fadeAnim }}>
             <View style={styles.blocoPergunta}>
@@ -185,9 +184,9 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 40,
     paddingHorizontal: 20,
-    backgroundColor: '#f6eecf',  // Cor de fundo bege
+    backgroundColor: '#f6eecf',  
     alignItems: 'center',
-    flexGrow: 1,  // Garante que a página ocupe toda a altura da tela
+    flexGrow: 1,  
     position: 'relative',
   },
   titulo: {
@@ -202,9 +201,9 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#fff',  // Fundo branco para as perguntas
-    borderRadius: 15,  // Borda arredondada
-    shadowColor: '#000',  // Sombra para dar um efeito de elevação
+    backgroundColor: '#fff', 
+    borderRadius: 15,  
+    shadowColor: '#000',  
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -230,7 +229,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderRadius: 10,
     marginBottom: 15,
-    flexBasis: '45%',  // Ajusta o tamanho dos botões
+    flexBasis: '45%', 
     alignItems: 'center',
     justifyContent: 'center',
   },

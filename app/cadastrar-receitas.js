@@ -85,7 +85,7 @@ export default function CadastrarReceitas() {
         nome: nomeReceita,
         ingredientes: ingredientesReceita,
         instrucoes: instrucoesReceita,
-        caloriasPorPorcao: caloriasReceita !== "" ? caloriasReceita : null, // Garantir que o valor seja válido
+        caloriasPorPorcao: caloriasReceita !== "" ? caloriasReceita : null, 
         categoria: categoriaReceita !== "" ? categoriaReceita : null,
         tipo: tipoReceita !== "" ? tipoReceita : null,
         fotoReceita: fotoReceita || null
@@ -99,7 +99,7 @@ export default function CadastrarReceitas() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(receitaAtualizada) // Envia os dados no corpo da requisição
+            body: JSON.stringify(receitaAtualizada) 
         });
 
         if (!response.ok) {
@@ -121,8 +121,8 @@ export default function CadastrarReceitas() {
 
         
         alert('Receita atualizada com sucesso!');
-        setModalVisible(false); // Fechar o modal
-        // Aqui você pode atualizar a lista de receitas no seu estado
+        setModalVisible(false); 
+
     } catch (error) {
         console.error('Erro ao atualizar receita:', error);
         alert('Erro ao atualizar receita');

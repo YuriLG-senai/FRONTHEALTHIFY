@@ -116,7 +116,7 @@ export default function IndexScreen() {
         const errorText = await complementoResponse.text();
         console.error('Erro ao cadastrar dados adicionais:', errorText);
 
-        // Se o erro for "usuario field is required", considerar sucesso
+  
         if (errorText.toLowerCase().includes('usuario field is required')) {
           alert('Cadastro realizado com sucesso!');
           resetForm();
