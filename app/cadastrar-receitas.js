@@ -38,7 +38,7 @@ export default function CadastrarReceitas() {
     { icon: 'document-text-outline', label: 'Clientes', route: '/ver-clientes' },
     { icon: 'restaurant-outline', label: 'Cadastrar Planos Alimentares', route: '/cadastrar-planos-alimentares' },
     { icon: 'book-outline', label: 'Cadastrar Receitas', route: '/cadastrar-receitas' },
-    { icon: 'chatbubble-ellipses-outline', label: 'Chat com Cliente', route: '/chat-com-cliente' },
+    { icon: 'person-circle-outline', label: 'perfil', route: '/chat-com-cliente' },
   ];
 
   useEffect(() => {
