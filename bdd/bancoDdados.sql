@@ -94,8 +94,10 @@ CREATE TABLE Receitas (
 CREATE TABLE PlanoReceitas (
     PlanoId INT,
     ReceitaId INT,
-    QuantidadePorcao INT NOT NULL, 
-    PRIMARY KEY (PlanoId, ReceitaId),
+    QuantidadePorcao INT NOT NULL,
+    DiaSemana ENUM('Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo') NOT NULL,
+    Refeicao ENUM('Café','Lanche','Almoço','Jantar','Ceia') NOT NULL,
+    PRIMARY KEY (PlanoId, ReceitaId, DiaSemana, Refeicao),
     FOREIGN KEY (PlanoId) REFERENCES PlanosAlimentares(PlanoId),
     FOREIGN KEY (ReceitaId) REFERENCES Receitas(ReceitaId)
 );
