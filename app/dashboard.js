@@ -21,7 +21,7 @@ export default function DashboardScreen() {
     { icon: 'restaurant-outline', label: 'Plano Alimentar', route: '/plano-alimentar' },
     { icon: 'barbell-outline', label: 'Treino', route: '/treino' },
     { icon: 'stats-chart-outline', label: 'Progresso', route: '/progresso' },
-    { icon: 'person-circle-outline', label: 'perfil', route:  '/chat' },
+    { icon: 'person-circle-outline', label: 'Perfil', route:  '/chat' },
   ];
 
   const backgroundAnim = useRef(new Animated.Value(0)).current; 

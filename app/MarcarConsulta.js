@@ -8,92 +8,142 @@ export default function ConsultarDisponibilidade() {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(null);
   const [markedDates, setMarkedDates] = useState({});
-  const [diasIndisponiveis, setDiasIndisponiveis] = useState([]);
-  const [horariosOcupados, setHorariosOcupados] = useState([]);
-  const [nutricionistaData, setNutricionistaData] = useState(null);
+  const [consultas, setConsultas] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [nutricionistaId] = useState(1);
+  const [nutricionistasData, setNutricionistasData] = useState({});
+  const [clienteIdLogado, setClienteIdLogado] = useState(null);
 
-  useEffect(() => {
-    fetchDiasOcupados(nutricionistaId);
-  }, [nutricionistaId]);
-
-  const fetchDiasOcupados = async (id) => {
+  // Busca usuário logado
+  const fetchUsuarioLogado = async () => {
     try {
-      const res = await fetch('http://localhost:5036/api/consultas/dias-indisponiveis/' + id);
-      const dias = await res.json();
+      const res = await fetch('http://localhost:5036/api/usuarios/logado');
+      if (!res.ok) throw new Error('Erro ao buscar usuário logado');
+      const usuario = await res.json();
+      setClienteIdLogado(usuario.usuarioId || usuario.id); // ajuste conforme seu backend
+    } catch (err) {
+      console.error('Erro ao buscar usuário logado:', err);
+    }
+  };
 
-      const datasFormatadas = dias.map(dia =>
-        dia.length === 10 ? dia : new Date(dia).toISOString().split('T')[0]
+  // Busca consultas do cliente logado para marcar datas no calendário
+  const fetchDiasOcupados = async () => {
+    try {
+      const res = await fetch('http://localhost:5036/api/consultas');
+      if (!res.ok) throw new Error('Erro ao buscar consultas');
+      const todasConsultas = await res.json();
+
+      // Filtra consultas só do cliente logado
+      const consultasCliente = todasConsultas.filter(
+        c => String(c.clienteId) === String(clienteIdLogado)
       );
 
-      setDiasIndisponiveis(datasFormatadas);
-      atualizarMarcacoes(selectedDate, datasFormatadas);
+      const datasMarcadas = {};
+      consultasCliente.forEach(c => {
+        const data = c.dataConsulta.split('T')[0];
+        datasMarcadas[data] = {
+          marked: true,
+          dotColor: '#cc3b3b',
+        };
+      });
+
+      setMarkedDates(datasMarcadas);
     } catch (err) {
       console.error('Erro ao buscar dias ocupados:', err);
     }
   };
 
-  const atualizarMarcacoes = (dataSelecionada, dias = diasIndisponiveis) => {
-    const novaMarcacao = {};
-
-    dias.forEach((dia) => {
-      if (dia !== dataSelecionada) {
-        novaMarcacao[dia] = {
-          marked: true,
-          dotColor: '#cc3b3b',
-        };
-      }
-    });
-
-    if (dataSelecionada) {
-      novaMarcacao[dataSelecionada] = {
-        selected: true,
-        selectedColor: '#097d4c',
-        selectedTextColor: '#fff',
-      };
-    }
-
-    setMarkedDates(novaMarcacao);
-  };
-
-  const fetchHorariosOcupados = async (data) => {
-    setLoading(true);
+  // Busca telefone do nutricionista (para exibir junto)
+  const fetchTelefoneUsuario = async (usuarioId) => {
     try {
-      const res = await fetch('http://localhost:5036/api/consultas/horarios-ocupados?data=' + data);
-      const horarios = await res.json();
-      setHorariosOcupados(horarios);
-
-      if (horarios.length > 0 && horarios[0].nutricionistaId) {
-        fetchNutricionistaData(horarios[0].nutricionistaId);
-      } else {
-        setNutricionistaData(null);
-      }
+      const res = await fetch(`http://localhost:5036/api/usuarios/${usuarioId}`);
+      if (!res.ok) throw new Error('Erro ao buscar usuário');
+      const usuario = await res.json();
+      return usuario.telefone || null;
     } catch (e) {
-      console.error('Erro ao buscar horários:', e);
-      setHorariosOcupados([]);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao buscar telefone do usuário:', e);
+      return null;
     }
   };
 
-  const fetchNutricionistaData = async (id) => {
+  // Busca dados do nutricionista e salva no estado para não buscar repetido
+  const fetchDadosNutricionista = async (nutri) => {
+    if (!nutri?.usuarioId) return null;
+
+    if (nutricionistasData[nutri.usuarioId]) {
+      return nutricionistasData[nutri.usuarioId];
+    }
+
     try {
-      const res = await fetch('http://localhost:5036/api/nutricionistas/' + id);
-      const data = await res.json();
-      setNutricionistaData(data);
+      const telefone = await fetchTelefoneUsuario(nutri.usuarioId);
+      const dadosComTelefone = { ...nutri, telefone };
+      setNutricionistasData(prev => ({
+        ...prev,
+        [nutri.usuarioId]: dadosComTelefone,
+      }));
+      return dadosComTelefone;
     } catch (e) {
       console.error('Erro ao buscar dados do nutricionista:', e);
-      setNutricionistaData(null);
+      return null;
+    }
+  };
+
+  // Busca consultas do cliente logado filtradas pela data selecionada
+  const fetchConsultasPorData = async (data) => {
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5036/api/consultas');
+      if (!res.ok) throw new Error('Erro ao buscar consultas');
+      const todasConsultas = await res.json();
+
+      const consultasFiltradas = todasConsultas.filter(consulta => {
+        const dataConsultaISO = consulta.dataConsulta ? consulta.dataConsulta.split('T')[0] : null;
+        return (
+          dataConsultaISO === data &&
+          String(consulta.clienteId) === String(clienteIdLogado)
+        );
+      });
+
+      await Promise.all(
+        consultasFiltradas.map(async (consulta) => {
+          if (consulta.nutricionista) {
+            await fetchDadosNutricionista(consulta.nutricionista);
+          }
+        })
+      );
+
+      setConsultas(consultasFiltradas);
+    } catch (e) {
+      console.error('Erro ao buscar consultas:', e);
+      setConsultas([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDateSelect = (day) => {
     const selected = day.dateString;
     setSelectedDate(selected);
-    fetchHorariosOcupados(selected);
-    atualizarMarcacoes(selected);
+    fetchConsultasPorData(selected);
   };
+
+  useEffect(() => {
+    fetchUsuarioLogado();
+  }, []);
+
+  useEffect(() => {
+    if (clienteIdLogado !== null) {
+      fetchDiasOcupados();
+    }
+  }, [clienteIdLogado]);
+
+  if (clienteIdLogado === null) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#097d4c" />
+        <Text>Carregando usuário...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -123,19 +173,27 @@ export default function ConsultarDisponibilidade() {
           <Text style={styles.scheduleTitle}>Consultas em {selectedDate}</Text>
           {loading ? (
             <ActivityIndicator size="large" color="#097d4c" />
-          ) : horariosOcupados.length > 0 ? (
-            horariosOcupados.map((item, idx) => (
-              <View key={idx} style={[styles.timeSlot, styles.occupied]}>
-                <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
-                <View>
-                  <Text style={[styles.timeText, { color: '#fff' }]}>Horário: {item.hora}</Text>
-                  <Text style={styles.nutriName}>Nutricionista: {item.nutricionistaNome}</Text>
-                  {item.nutricionistaTelefone && (
-                    <Text style={styles.nutriName}>Contato: {item.nutricionistaTelefone}</Text>
-                  )}
+          ) : consultas.length > 0 ? (
+            consultas.map((item, idx) => {
+              const nutri = item.nutricionista;
+              const dadosNutri = nutri && nutricionistasData[nutri.usuarioId];
+
+              return (
+                <View key={idx} style={[styles.timeSlot, styles.occupied]}>
+                  <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
+                  <View>
+                    <Text style={[styles.timeText, { color: '#fff' }]}>Horário: {item.horaConsulta}</Text>
+                    <Text style={styles.nutriName}>Nutricionista: {nutri?.nome || 'Desconhecido'}</Text>
+                    {dadosNutri?.telefone && (
+                      <Text style={styles.nutriName}>Telefone: {dadosNutri.telefone}</Text>
+                    )}
+                    {item.observacoes && (
+                      <Text style={styles.nutriName}>Observações: {item.observacoes}</Text>
+                    )}
+                  </View>
                 </View>
-              </View>
-            ))
+              );
+            })
           ) : (
             <Text style={styles.emptyMessage}>Nenhuma consulta marcada neste dia.</Text>
           )}
