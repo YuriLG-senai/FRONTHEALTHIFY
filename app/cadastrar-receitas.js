@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Modal, TextInput, Button } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Modal, TextInput, Button, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -8,6 +8,7 @@ export default function CadastrarReceitas() {
   const [receitas, setReceitas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+
   const [newRecipe, setNewRecipe] = useState({
     nome: '',
     ingredientes: '',
@@ -38,7 +39,7 @@ export default function CadastrarReceitas() {
     { icon: 'document-text-outline', label: 'Clientes', route: '/ver-clientes' },
     { icon: 'restaurant-outline', label: 'Cadastrar Planos Alimentares', route: '/cadastrar-planos-alimentares' },
     { icon: 'book-outline', label: 'Cadastrar Receitas', route: '/cadastrar-receitas' },
-    { icon: 'person-circle-outline', label: 'perfil', route: '/chat-com-cliente' },
+    { icon: 'person-circle-outline', label: 'Perfil', route: '/chat-com-cliente' },
   ];
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function CadastrarReceitas() {
   }, []);
 
   const fetchReceitas = async () => {
+    setLoading(true);
     try {
       const response = await fetch('http://localhost:5036/api/Receitas');
       const data = await response.json();
@@ -344,15 +346,27 @@ export default function CadastrarReceitas() {
 }
 
 function MenuButton({ icon, label, onPress }) {
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const handleHoverIn = () => {
+    Animated.spring(translateY, { toValue: -6, useNativeDriver: true }).start();
+  };
+
+  const handleHoverOut = () => {
+    Animated.spring(translateY, { toValue: 0, useNativeDriver: true }).start();
+  };
+
   return (
-  <Pressable onPress={onPress} style={{ marginBottom: 16 }}>
-    <View style={styles.card}>
-      <Ionicons name={icon} size={30} color="#097d4c" />
-       <Text style={styles.label}>{label}</Text> 
-    </View> 
-  </Pressable>
+    <Pressable onPress={onPress} onHoverIn={handleHoverIn} onHoverOut={handleHoverOut} style={{ marginBottom: 16 }}>
+      <Animated.View style={{ transform: [{ translateY }] }}>
+        <View style={styles.card}>
+          <Ionicons name={icon} size={30} color="#097d4c" />
+          <Text style={styles.label}>{label}</Text>
+        </View>
+      </Animated.View>
+    </Pressable>
   );
-  }
+}
   
   const styles = StyleSheet.create({
   container: {

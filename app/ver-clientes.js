@@ -32,6 +32,17 @@ export default function VerClientes() {
     }
   };
 
+  async function excluirCliente(ClienteId) {
+    console.log('Tentando excluir cliente com ID:', ClienteId);
+    try {
+      await fetch(`http://localhost:5036/api/Clientes/${ClienteId}`, { method: 'DELETE' });
+      setClientes((prev) => prev.filter((c) => c.clienteId !== ClienteId));
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+    }
+  }
+  
+
   const features = [
     { icon: 'calendar-outline', label: 'Consultas', route: '/ver-consulta' },
     { icon: 'document-text-outline', label: 'Clientes', route: '/ver-clientes' },
@@ -86,11 +97,8 @@ export default function VerClientes() {
           <Text style={styles.textoBotao}>Ver Detalhes</Text>
         </Pressable>
 
-        <Pressable
-          style={styles.botaoEditar}
-          onPress={() => router.push(`/editar-cliente/${item.clienteId}`)}
-        >
-          <Text style={styles.textoBotao}>Editar</Text>
+        <Pressable style={styles.botaoExcluir} onPress={() => excluirCliente(item.clienteId)}>
+                    <Text style={styles.textoBotao}>Excluir</Text>
         </Pressable>
       </View>
     </View>
@@ -199,6 +207,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: 'center',
   },
+  botaoExcluir: {
+    backgroundColor: '#d9534f',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
