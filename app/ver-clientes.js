@@ -48,7 +48,7 @@ export default function VerClientes() {
     { icon: 'document-text-outline', label: 'Clientes', route: '/ver-clientes' },
     { icon: 'restaurant-outline', label: 'Cadastrar Planos Alimentares', route: '/cadastrar-planos-alimentares' },
     { icon: 'book-outline', label: 'Cadastrar Receitas', route: '/cadastrar-receitas' },
-    { icon: 'person-circle-outline', label: 'perfil', route: '/chat-com-cliente' },
+    { icon: 'person-circle-outline', label: 'Perfil', route: '/chat-com-cliente' },
   ];
 
   return (
@@ -119,9 +119,14 @@ export default function VerClientes() {
         <Text style={styles.modalTitulo}>{clienteSelecionado.nome}</Text> 
         <Text style={styles.modalTexto}>Email: {clienteSelecionado.email}</Text> 
         <Text style={styles.modalTexto}>CPF: {clienteSelecionado.cpf}</Text> 
-        <Text style={styles.modalTexto}>Telefone: {clienteSelecionado.telefone}</Text> 
-        <Text style={styles.modalTexto}>Endereço: {clienteSelecionado.endereco}</Text> 
-        {/* Adicione mais campos conforme necessário */}
+        <Text style={styles.modalTexto}>Telefone: {clienteSelecionado.telefone}</Text>  
+        <Text style={styles.modalTexto}>Peso: {clienteSelecionado.peso}</Text>
+        <Text style={styles.modalTexto}>Altura: {clienteSelecionado.altura}</Text>
+        <Text style={styles.modalTexto}>Objetivo: {clienteSelecionado.objetivo}</Text>
+        <Text style={styles.modalTexto}>Nível Atividade: {clienteSelecionado.nivelAtividade}</Text>
+        <Text style={styles.modalTexto}>Preferências Alimentares: {clienteSelecionado.preferenciasAlimentares}</Text>
+        <Text style={styles.modalTexto}>Doenças Preexistentes: {clienteSelecionado.doencasPreexistentes}</Text>
+        
 
         <Pressable
           style={styles.botaoFechar}
