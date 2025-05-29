@@ -13,7 +13,7 @@ export default function ConsultarDisponibilidade() {
   const [nutricionistasData, setNutricionistasData] = useState({});
   const [clienteIdLogado, setClienteIdLogado] = useState(null);
 
-  // Busca usuário logado
+  
   const fetchUsuarioLogado = async () => {
     try {
       const res = await fetch('http://localhost:5036/api/usuarios/logado');
