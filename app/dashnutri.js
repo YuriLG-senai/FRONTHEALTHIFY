@@ -13,7 +13,7 @@ export default function DashboardScreen() {
     { icon: 'document-text-outline', label: 'Clientes', route: '/ver-clientes' },
     { icon: 'restaurant-outline', label: 'Cadastrar Planos Alimentares', route: '/cadastrar-planos-alimentares' },
     { icon: 'book-outline', label: 'Cadastrar Receitas', route: '/cadastrar-receitas' },
-    { icon: 'person-circle-outline', label: 'Perfil', route: '/chat-com-cliente' },
+    { icon: 'person-circle-outline', label: 'Perfil', route: '/perfil' },
   ];
 
   const logoScale = useRef(new Animated.Value(1)).current;

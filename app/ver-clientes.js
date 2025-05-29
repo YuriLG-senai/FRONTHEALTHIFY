@@ -48,7 +48,7 @@ export default function VerClientes() {
     { icon: 'document-text-outline', label: 'Clientes', route: '/ver-clientes' },
     { icon: 'restaurant-outline', label: 'Cadastrar Planos Alimentares', route: '/cadastrar-planos-alimentares' },
     { icon: 'book-outline', label: 'Cadastrar Receitas', route: '/cadastrar-receitas' },
-    { icon: 'person-circle-outline', label: 'perfil', route: '/chat-com-cliente' },
+    { icon: 'person-circle-outline', label: 'Perfil', route: '/perfil' },
   ];
 
   return (

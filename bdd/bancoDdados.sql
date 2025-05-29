@@ -1,7 +1,7 @@
 CREATE DATABASE IF NOT EXISTS healthify;
 USE healthify;
 
--- Drop as tabelas se existirem
+
 DROP TABLE IF EXISTS Usuarios;
 DROP TABLE IF EXISTS Clientes;
 DROP TABLE IF EXISTS Nutricionistas;
@@ -11,7 +11,6 @@ DROP TABLE IF EXISTS Receitas;
 DROP TABLE IF EXISTS PlanoReceitas;
 DROP TABLE IF EXISTS ProgressoCliente;
 
--- Criar a tabela de Usuários
 CREATE TABLE Usuarios (
     UsuarioId INT AUTO_INCREMENT PRIMARY KEY,
     Nome VARCHAR(100) NOT NULL,
@@ -27,7 +26,6 @@ CREATE TABLE Usuarios (
     cpf VARCHAR(11) NOT NULL UNIQUE
 );
 
--- Criar a tabela de Clientes
 CREATE TABLE Clientes (
     ClienteId INT AUTO_INCREMENT PRIMARY KEY,
     UsuarioId INT,
@@ -40,7 +38,6 @@ CREATE TABLE Clientes (
     FOREIGN KEY (UsuarioId) REFERENCES Usuarios(UsuarioId)
 );
 
--- Criar a tabela de Nutricionistas
 CREATE TABLE Nutricionistas (
     NutricionistaId INT AUTO_INCREMENT PRIMARY KEY,
     UsuarioId INT,
@@ -50,7 +47,6 @@ CREATE TABLE Nutricionistas (
     FOREIGN KEY (UsuarioId) REFERENCES Usuarios(UsuarioId)
 );
 
--- Create the Consultas table
 CREATE TABLE Consultas (
     ConsultaId INT AUTO_INCREMENT PRIMARY KEY,
     ClienteId INT,
@@ -64,7 +60,6 @@ CREATE TABLE Consultas (
     FOREIGN KEY (NutricionistaId) REFERENCES Nutricionistas(NutricionistaId)
 );
 
--- Create the PlanosAlimentares table
 CREATE TABLE PlanosAlimentares (
     PlanoId INT AUTO_INCREMENT PRIMARY KEY,
     ClienteId INT,
@@ -78,19 +73,17 @@ CREATE TABLE PlanosAlimentares (
     FOREIGN KEY (NutricionistaId) REFERENCES Nutricionistas(NutricionistaId)
 );
 
--- Create the Receitas table
 CREATE TABLE Receitas (
     ReceitaId INT AUTO_INCREMENT PRIMARY KEY,
     Nome VARCHAR(255) NOT NULL,
-    Ingredientes TEXT NOT NULL,  -- Lista de ingredientes
-    Instrucoes TEXT NOT NULL,  -- Como preparar
-    CaloriasPorPorcao DECIMAL(5,2) NULL,  -- Calorias por porção
-    Categoria VARCHAR(255) NULL,  -- Ex: Café da manhã, almoço, jantar, etc.
-    Tipo VARCHAR(255) NULL,  -- Ex: Vegano, sem glúten, sem lactose, etc.
+    Ingredientes TEXT NOT NULL,  
+    Instrucoes TEXT NOT NULL,  
+    CaloriasPorPorcao DECIMAL(5,2) NULL,  
+    Categoria VARCHAR(255) NULL,  
+    Tipo VARCHAR(255) NULL,  
     FotoReceita VARCHAR(255) NULL
 );
 
--- Create the PlanoReceitas table
 CREATE TABLE PlanoReceitas (
     PlanoId INT,
     ReceitaId INT,
@@ -102,7 +95,6 @@ CREATE TABLE PlanoReceitas (
     FOREIGN KEY (ReceitaId) REFERENCES Receitas(ReceitaId)
 );
 
--- Create the ProgressoCliente table
 CREATE TABLE ProgressoCliente (
     ProgressoId INT AUTO_INCREMENT PRIMARY KEY,
     ClienteId INT,
@@ -131,7 +123,7 @@ VALUES
 ('Rafael Oliveira', 'rafael.cliente@example.com', 'senha123', 'Cliente', '1990-07-01', 'Masculino', '11999991002', 'Av Y, 200', '55555555555'),
 ('Letícia Martins', 'leticia.cliente@example.com', 'senha123', 'Cliente', '2001-11-19', 'Feminino', '11999991003', 'Av Z, 300', '66666666666');
 
--- Inserir dados na tabela Clientes
+
 INSERT INTO Clientes (UsuarioId, Peso, Altura, Objetivo, NivelAtividade, PreferenciasAlimentares, DoencasPreexistentes)
 VALUES
 ((SELECT UsuarioId FROM Usuarios WHERE Email = 'camila.cliente@example.com'), 62.5, 1.67, 'Definição muscular', 'Levemente ativo', 'Vegetariana', 'Nenhuma'),
