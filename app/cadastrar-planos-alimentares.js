@@ -21,7 +21,7 @@ export default function CriarPlanoAlimentar() {
       <View style={styles.container}>
         <Pressable style={styles.backButton} onPress={() => router.push('/dashnutri')}>
           <Ionicons name="arrow-back-outline" size={24} color="#097d4c" />
-          <Text style={styles.backText}>Voltar</Text>
+          <Text style={styles.backText}>Sair / Voltar</Text>
         </Pressable>
 
         <Text style={styles.titulo}>Criar Plano Alimentar</Text>
