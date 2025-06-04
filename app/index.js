@@ -7,7 +7,13 @@ import { useRouter } from 'expo-router';
 import Checkbox from 'expo-checkbox';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as jwtDecode from 'jwt-decode';
+import jwtDecode from 'jwt-decode';
+
+
+
+
+
+
 
 
 export default function IndexScreen() {
@@ -168,31 +174,30 @@ export default function IndexScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha: password }),
       });
-
+  
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Erro no login:', errorText);
         alert('Email ou senha incorretos.');
         return;
       }
+  
       const data = await response.json();
-
+  
       const token = data.token;
-      const Usuario = data.usuario;
+
+      const decoded = jwtDecode(token);
 
 
-      const decoded = jwtDecode.default(token);
 
       console.log('Dados decodificados do token:', decoded);
-      const usuarioId = decoded['UsuarioId'] || decoded['usuarioId'];
-      const tipoUsuario = decoded['TipoUsuario'] || decoded['tipoUsuario'];
-
+      
+      const usuarioId = decoded.UsuarioId || decoded.usuarioId;
+      const tipoUsuario = decoded.TipoUsuario || decoded.tipoUsuario;
+  
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem('userId', usuarioId.toString());
-
-
-
-
+  
       if (tipoUsuario === 'Nutricionista') {
         router.push('/dashnutri');
       } else {
@@ -203,6 +208,7 @@ export default function IndexScreen() {
       alert('Erro de conexão com o servidor.');
     }
   };
+  
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
