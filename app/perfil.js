@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const MenuButton = ({ icon, label, onPress }) => {
   return (
@@ -22,7 +24,7 @@ export default function PerfilUsuario() {
     telefone: '',
     crn: '',
     especializacao: '',
-    
+
   });
 
   const router = useRouter();
@@ -41,8 +43,20 @@ export default function PerfilUsuario() {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch('http://localhost:5036/api/Usuario/perfil');
+      const token = await AsyncStorage.getItem('token');
+      if (!token) throw new Error('Token não encontrado');
+
+
+      const response = await fetch('http://localhost:5036/api/Usuarios/perfil', {
+        method: 'GET',
+          headers: {
+          'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+      },
+      });
+
       if (!response.ok) throw new Error('Erro na resposta do servidor');
+
       const data = await response.json();
       setUserData(data);
       setEditData({

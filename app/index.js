@@ -6,6 +6,9 @@ import {
 import { useRouter } from 'expo-router';
 import Checkbox from 'expo-checkbox';
 import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as jwtDecode from 'jwt-decode';
+
 
 export default function IndexScreen() {
   const [email, setEmail] = useState('');
@@ -35,7 +38,7 @@ export default function IndexScreen() {
   const validateEmail = (email) => {
     return email.includes('@') && email.includes('.');
   };
-  
+
   const formatDateToISO = (inputDate) => {
     if (!inputDate) return '';
     const [day, month, year] = inputDate.split('-');
@@ -96,14 +99,14 @@ export default function IndexScreen() {
       const dadosComplementares = isNutricionista
         ? { usuarioId, especialidade, descricao }
         : {
-            UsuarioId: usuarioId,
-            peso: parseFloat(peso),
-            altura: parseFloat(altura),
-            objetivo,
-            nivelAtividade,
-            preferenciasAlimentares,
-            doencasPreexistentes
-          };
+          UsuarioId: usuarioId,
+          peso: parseFloat(peso),
+          altura: parseFloat(altura),
+          objetivo,
+          nivelAtividade,
+          preferenciasAlimentares,
+          doencasPreexistentes
+        };
 
       const endpoint = isNutricionista ? 'Nutricionistas' : 'Clientes';
       const complementoResponse = await fetch(`http://localhost:5036/api/${endpoint}`, {
@@ -116,7 +119,7 @@ export default function IndexScreen() {
         const errorText = await complementoResponse.text();
         console.error('Erro ao cadastrar dados adicionais:', errorText);
 
-  
+
         if (errorText.toLowerCase().includes('usuario field is required')) {
           alert('Cadastro realizado com sucesso!');
           resetForm();
@@ -160,7 +163,7 @@ export default function IndexScreen() {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://localhost:5036/api/Usuarios/login', {
+      const response = await fetch('http://localhost:5036/api/Auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha: password }),
@@ -172,11 +175,25 @@ export default function IndexScreen() {
         alert('Email ou senha incorretos.');
         return;
       }
+      const data = await response.json();
 
-      const usuario = await response.json();
-      window.localStorage.setItem('userId', usuario.usuarioId);
+      const token = data.token;
+      const Usuario = data.usuario;
 
-      if (usuario.tipoUsuario === 'Nutricionista') {
+
+      const decoded = jwtDecode.default(token);
+
+      console.log('Dados decodificados do token:', decoded);
+      const usuarioId = decoded['UsuarioId'] || decoded['usuarioId'];
+      const tipoUsuario = decoded['TipoUsuario'] || decoded['tipoUsuario'];
+
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('userId', usuarioId.toString());
+
+
+
+
+      if (tipoUsuario === 'Nutricionista') {
         router.push('/dashnutri');
       } else {
         router.push('/dashboard');
