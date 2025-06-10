@@ -43,7 +43,7 @@ export default function RootLayout() {
     <Stack.Screen name="ver-clientes" options={{ headerShown: false }} />
     <Stack.Screen name="cadastrar-planos-alimentares" options={{ headerShown: false }} />
     <Stack.Screen name="cadastrar-receitas" options={{ headerShown: false }} />
-    <Stack.Screen name="chat-com-cliente" options={{ headerShown: false }} />
+    <Stack.Screen name="perfilcliente" options={{ headerShown: false }} />
     <Stack.Screen name="perfil" options={{ headerShown: false }} />
     <Stack.Screen name="+not-found" />
   </Stack>

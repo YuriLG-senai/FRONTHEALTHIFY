@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ConsultarDisponibilidade() {
   const router = useRouter();
@@ -13,38 +14,74 @@ export default function ConsultarDisponibilidade() {
   const [nutricionistasData, setNutricionistasData] = useState({});
   const [clienteIdLogado, setClienteIdLogado] = useState(null);
 
-  
+
   const fetchUsuarioLogado = async () => {
     try {
-      const res = await fetch('http://localhost:5036/api/usuarios/logado');
+      const token = await AsyncStorage.getItem('token');
+      if (!token) throw new Error('Token não encontrado');
+
+      const res = await fetch('http://localhost:5036/api/Usuarios/logado', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
       if (!res.ok) throw new Error('Erro ao buscar usuário logado');
       const usuario = await res.json();
-      setClienteIdLogado(usuario.usuarioId || usuario.id); // ajuste conforme seu backend
+
+      const clienteId = await fetchClienteIdPorUsuario(usuario.usuarioId);
+      setClienteIdLogado(clienteId);
     } catch (err) {
       console.error('Erro ao buscar usuário logado:', err);
     }
   };
 
-  // Busca consultas do cliente logado para marcar datas no calendário
+  const fetchClienteIdPorUsuario = async (usuarioId) => {
+    try {
+      const res = await fetch(`http://localhost:5036/api/Usuarios/Clientes/usuario/${usuarioId}`);
+      if (!res.ok) throw new Error('Erro ao buscar cliente pelo usuário');
+      const cliente = await res.json();
+      return cliente.clienteId;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
   const fetchDiasOcupados = async () => {
     try {
       const res = await fetch('http://localhost:5036/api/consultas');
       if (!res.ok) throw new Error('Erro ao buscar consultas');
       const todasConsultas = await res.json();
 
+
+      console.log("Todas as consultas:", todasConsultas);
+      console.log("Cliente logado ID:", clienteIdLogado);
+
       // Filtra consultas só do cliente logado
       const consultasCliente = todasConsultas.filter(
         c => String(c.clienteId) === String(clienteIdLogado)
       );
 
+      console.log("Consultas do cliente filtradas:", consultasCliente);
+
       const datasMarcadas = {};
+
+
       consultasCliente.forEach(c => {
         const data = c.dataConsulta.split('T')[0];
+        console.log("Data extraída da consulta:", data);
+
+
         datasMarcadas[data] = {
           marked: true,
           dotColor: '#cc3b3b',
+          selected: true,
         };
       });
+
+      console.log("Datas marcadas a setar:", datasMarcadas);
 
       setMarkedDates(datasMarcadas);
     } catch (err) {
@@ -55,7 +92,7 @@ export default function ConsultarDisponibilidade() {
   // Busca telefone do nutricionista (para exibir junto)
   const fetchTelefoneUsuario = async (usuarioId) => {
     try {
-      const res = await fetch(`http://localhost:5036/api/usuarios/${usuarioId}`);
+      const res = await fetch(`http://localhost:5036/api/Usuarios/${usuarioId}`);
       if (!res.ok) throw new Error('Erro ao buscar usuário');
       const usuario = await res.json();
       return usuario.telefone || null;
@@ -91,7 +128,7 @@ export default function ConsultarDisponibilidade() {
   const fetchConsultasPorData = async (data) => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5036/api/consultas');
+      const res = await fetch('http://localhost:5036/api/Consultas');
       if (!res.ok) throw new Error('Erro ao buscar consultas');
       const todasConsultas = await res.json();
 
@@ -131,8 +168,10 @@ export default function ConsultarDisponibilidade() {
   }, []);
 
   useEffect(() => {
-    if (clienteIdLogado !== null) {
+    if (clienteIdLogado !== null && clienteIdLogado !== undefined) {
       fetchDiasOcupados();
+    } else {
+      console.log("Cliente ID não definido ainda:", clienteIdLogado);
     }
   }, [clienteIdLogado]);
 
