@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Animated,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -10,9 +20,19 @@ export const options = {
 export default function Questionario() {
   const router = useRouter();
   const [respostas, setRespostas] = useState({});
-  const [pageIndex, setPageIndex] = useState(0);  
-  const [visibleQuestions, setVisibleQuestions] = useState([0, 1]);  
-  const fadeAnim = useRef(new Animated.Value(0)).current;  
+  const [pageIndex, setPageIndex] = useState(0);
+  const [visibleQuestions, setVisibleQuestions] = useState([0, 1]);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [pageIndex]);
+  const [showResumo, setShowResumo] = useState(false);
 
   const perguntas = [
     {
@@ -72,6 +92,56 @@ export default function Questionario() {
     },
   ];
 
+  // Função que retorna sugestões baseadas na resposta de cada pergunta
+  const obterSugestao = (id, resposta) => {
+    switch (id) {
+      case 'cafeDaManha':
+        if (resposta === 'Não') return 'Tente incluir um café da manhã para melhorar seu metabolismo.';
+        if (resposta === 'Às vezes') return 'Procure tomar café da manhã com mais regularidade.';
+        return 'Ótimo que você toma café da manhã!';
+      case 'refeicoesPorDia':
+        if (resposta === '2 ou menos') return 'Considere aumentar o número de refeições para manter energia.';
+        if (resposta === '5 ou mais') return 'Cuidado para não exagerar nas refeições.';
+        return 'Quantidade ideal de refeições.';
+      case 'consumoAgua':
+        if (resposta === 'Menos de 1L') return 'Beba mais água para se manter hidratado.';
+        if (resposta === '1 a 2L') return 'Boa hidratação, continue assim!';
+        return 'Excelente consumo de água!';
+      case 'alimentosIndustrializados':
+        if (resposta === 'Sim') return 'Reduza o consumo de alimentos industrializados.';
+        if (resposta === 'Raramente') return 'Continue evitando alimentos industrializados.';
+        return 'Parabéns por não consumir alimentos industrializados!';
+      case 'frutasVerduras':
+        if (resposta === 'Não') return 'Inclua frutas e verduras na sua dieta diária.';
+        if (resposta === 'Às vezes') return 'Tente aumentar o consumo de frutas e verduras.';
+        return 'Ótimo consumo de frutas e verduras!';
+      case 'atividadeFisica':
+        if (resposta === 'Não, quase nunca') return 'Pratique atividades físicas para melhorar sua saúde.';
+        if (resposta === 'Sim, 1 a 2 vezes por semana') return 'Tente aumentar a frequência da atividade física.';
+        return 'Parabéns pela sua rotina ativa!';
+      case 'horasDeSono':
+        if (resposta === 'Menos de 6 horas') return 'Durma mais para melhorar seu descanso.';
+        if (resposta === 'Mais de 8 horas') return 'Cuidado para não dormir demais.';
+        return 'Boa quantidade de sono.';
+      case 'nivelDeEstresse':
+        if (resposta === 'Alto') return 'Busque técnicas de relaxamento para reduzir o estresse.';
+        if (resposta === 'Moderado') return 'Fique atento ao seu nível de estresse.';
+        return 'Ótimo que seu estresse está baixo.';
+      case 'trabalhoEmCasa':
+        if (resposta === 'Sim') return 'Mantenha uma boa postura e faça pausas frequentes.';
+        return 'Ótimo que você não trabalha em casa.';
+      case 'tempoDeTela':
+        if (resposta === 'Mais de 4 horas') return 'Tente diminuir o tempo de tela para descansar os olhos.';
+        if (resposta === '2 a 4 horas') return 'Tempo de tela razoável, cuide para não exagerar.';
+        return 'Ótimo tempo de tela curto!';
+      case 'descanso':
+        if (resposta === 'Não') return 'Reserve momentos para descansar durante o dia.';
+        if (resposta === 'Às vezes') return 'Tente aumentar os momentos de descanso.';
+        return 'Muito bom que você descansa regularmente.';
+      default:
+        return '';
+    }
+  };
 
   const responder = (perguntaId, opcao) => {
     setRespostas((prev) => ({
@@ -80,14 +150,12 @@ export default function Questionario() {
     }));
   };
 
-
   const avancarPerguntas = () => {
-
     if (pageIndex + 2 < perguntas.length) {
       setPageIndex(pageIndex + 2);
       setVisibleQuestions([pageIndex + 2, pageIndex + 3]);
-      
 
+      fadeAnim.setValue(0);
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
@@ -96,19 +164,14 @@ export default function Questionario() {
     }
   };
 
-  const enviarRespostas = () => {
-    console.log('Respostas enviadas:', respostas);
-    Alert.alert('Obrigado!', 'Suas respostas foram enviadas com sucesso.');
+  const abrirResumo = () => {
+    // Só abre se todas as perguntas estiverem respondidas
+    if (Object.keys(respostas).length < perguntas.length) {
+      Alert.alert('Atenção', 'Por favor, responda todas as perguntas antes de ver o resumo.');
+      return;
+    }
+    setShowResumo(true);
   };
-
-  useEffect(() => {
-
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-  }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -122,7 +185,7 @@ export default function Questionario() {
       {/* Exibe as perguntas com animação de fade-in */}
       {visibleQuestions.map((index) => {
         const pergunta = perguntas[index];
-        if (!pergunta) return null; 
+        if (!pergunta) return null;
         return (
           <Animated.View key={pergunta.id} style={{ opacity: fadeAnim }}>
             <View style={styles.blocoPergunta}>
@@ -153,15 +216,46 @@ export default function Questionario() {
         );
       })}
 
-      {/* Condicionalmente exibe o botão "Próximo" ou "Enviar" */}
+      {/* Botão "Próximo" ou "Ver seu resumo" */}
       <TouchableOpacity
         style={styles.botaoEnviar}
-        onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : enviarRespostas}
+        onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : abrirResumo}
       >
         <Text style={styles.botaoTexto}>
-          {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Enviar'}
+          {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
         </Text>
       </TouchableOpacity>
+
+      {/* Modal para o resumo */}
+      <Modal
+        visible={showResumo}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowResumo(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitulo}>Seu Resumo</Text>
+            <ScrollView style={{ maxHeight: 400, marginBottom: 20 }}>
+              {perguntas.map(({ id, texto }) => (
+                <View key={id} style={{ marginBottom: 15 }}>
+                  <Text style={styles.pergunta}>{texto}</Text>
+                  <Text style={{ fontWeight: '600', marginBottom: 5 }}>
+                    Resposta: {respostas[id]}
+                  </Text>
+                  <Text style={{ fontStyle: 'italic', color: '#555' }}>
+                    {obterSugestao(id, respostas[id])}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            <Pressable style={styles.botaoFechar} onPress={() => setShowResumo(false)}>
+              <Text style={styles.botaoTexto}>Fechar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -175,18 +269,12 @@ const styles = StyleSheet.create({
     padding: 10,
     zIndex: 100,
   },
-  dashboardButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
   container: {
     paddingVertical: 40,
     paddingHorizontal: 20,
-    backgroundColor: '#f6eecf',  
+    backgroundColor: '#f6eecf',
     alignItems: 'center',
-    flexGrow: 1,  
+    flexGrow: 1,
     position: 'relative',
   },
   titulo: {
@@ -201,9 +289,9 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#fff', 
-    borderRadius: 15,  
-    shadowColor: '#000',  
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -229,7 +317,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderRadius: 10,
     marginBottom: 15,
-    flexBasis: '45%', 
+    flexBasis: '45%',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -254,5 +342,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalTitulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#097d4c',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  botaoFechar: {
+    backgroundColor: '#097d4c',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
   },
 });
