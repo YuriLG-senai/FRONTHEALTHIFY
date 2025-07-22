@@ -228,67 +228,114 @@ export default function PerfilUsuario() {
   );
 }
 
+
+
 const styles = StyleSheet.create({
+  // Conteúdo da página geral
   pageContainer: {
     flexGrow: 1,
     flexDirection: 'row-reverse',
-    backgroundColor: '#f6eecf', // ajustado para tom próximo
+    backgroundColor: '#f6eecf',
   },
+
+  // Menu lateral direito
   rightMenu: {
-    width: 200,
-    backgroundColor: '#ffffff', // fundo branco
+    width: 240, // largura mais ampla
+    backgroundColor: '#f6eecf', // mesma cor de fundo da tela
     paddingTop: 40,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderLeftWidth: 1,
-    borderLeftColor: '#c5d6bc', // borda discreta
-    borderTopLeftRadius: 20,   // arredondar canto superior esquerdo
-    borderBottomLeftRadius: 20, // arredondar canto inferior esquerdo
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 1, // sombra para Android
+    borderLeftColor: '#ddd', // linha discreta separando o menu
   },
   menuButton: {
-    flexDirection: 'row',
+    flexDirection: 'column', // ícone acima do texto
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    justifyContent: 'center',
+    paddingVertical: 22,
     borderRadius: 10,
-    marginBottom: 8,
+    marginBottom: 18,
     backgroundColor: 'transparent',
   },
-  menuButtonPressed: {
-    backgroundColor: '#c0d4af',
-  },
   menuButtonText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#097d4c',
-    fontWeight: '600',
+    marginTop: 6,
+    fontSize: 14,
+    color: '#00713c',
+    fontWeight: '500',
+    textAlign: 'center',
   },
+
+  // Conteúdo principal
   container: {
     flexGrow: 1,
-    padding: 20,
     backgroundColor: '#f6eecf',
+    padding: 20,
+    paddingTop: 40,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
   },
   backText: {
+    marginLeft: 8,
     fontSize: 16,
     color: '#097d4c',
-    marginLeft: 6,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: 'bold',
     color: '#097d4c',
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#555',
     marginBottom: 20,
   },
+  calendar: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  scheduleContainer: {
+    paddingBottom: 20,
+  },
+  scheduleTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#333',
+    textAlign: 'center',
+  },
+  timeSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginVertical: 6,
+    marginHorizontal: 12,
+  },
+  occupied: {
+    backgroundColor: '#097d4c',
+  },
+  timeText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  nutriName: {
+    fontSize: 12,
+    color: '#f0f0f0',
+    fontStyle: 'italic',
+  },
+  emptyMessage: {
+    textAlign: 'center',
+    marginTop: 10,
+    color: '#333',
+  },
+
+  // Perfil e edição
   profileContainer: {
     flexGrow: 1,
   },
@@ -342,6 +389,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+
+  // Modal
   modalBackground: {
     flexGrow: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -396,4 +445,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
 
