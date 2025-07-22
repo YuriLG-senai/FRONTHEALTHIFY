@@ -230,24 +230,31 @@ export default function PerfilUsuario() {
 
 const styles = StyleSheet.create({
   pageContainer: {
-    flex: 1,
+    flexGrow: 1,
     flexDirection: 'row-reverse',
-    backgroundColor: '#f7faf7',
+    backgroundColor: '#f6eecf', // ajustado para tom próximo
   },
   rightMenu: {
-    width: 160,
-    backgroundColor: '#e0f0db',
+    width: 200,
+    backgroundColor: '#ffffff', // fundo branco
     paddingTop: 40,
     paddingHorizontal: 10,
     borderLeftWidth: 1,
-    borderColor: '#c5d6bc',
+    borderLeftColor: '#c5d6bc', // borda discreta
+    borderTopLeftRadius: 20,   // arredondar canto superior esquerdo
+    borderBottomLeftRadius: 20, // arredondar canto inferior esquerdo
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 1, // sombra para Android
   },
   menuButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 8,
     backgroundColor: 'transparent',
   },
@@ -261,8 +268,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
+    backgroundColor: '#f6eecf',
   },
   backButton: {
     flexDirection: 'row',
@@ -282,11 +290,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   profileContainer: {
-    flex: 1,
+    flexGrow: 1,
   },
   profileSection: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 20,
     marginBottom: 25,
     shadowColor: '#000',
@@ -319,12 +327,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   editButton: {
-    backgroundColor: '#e5a10b',
+    backgroundColor: '#097d4c',
     paddingVertical: 12,
     borderRadius: 10,
     marginTop: 20,
     alignItems: 'center',
-    shadowColor: '#b27e05',
+    shadowColor: '#097d4c',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.7,
     shadowRadius: 4,
@@ -335,14 +343,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   modalBackground: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     paddingHorizontal: 25,
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: 10,
     padding: 25,
     shadowColor: '#000',
     shadowOpacity: 0.25,
@@ -357,23 +365,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
+    height: 50,
     borderWidth: 1,
-    borderColor: '#b0c89a',
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderColor: '#097d4c',
+    borderRadius: 10,
     paddingHorizontal: 15,
-    fontSize: 16,
     marginBottom: 15,
     color: '#333',
+    backgroundColor: '#fff',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   modalButton: {
-    flex: 1,
+    flexGrow: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
   },
   cancelButton: {

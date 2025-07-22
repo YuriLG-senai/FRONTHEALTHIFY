@@ -103,7 +103,7 @@ export default function IndexScreen() {
       }
 
       const dadosComplementares = isNutricionista
-        ? { usuarioId, especialidade, descricao }
+        ? { UsuarioId: usuarioId, especialidade, descricao }
         : {
           UsuarioId: usuarioId,
           peso: parseFloat(peso),
