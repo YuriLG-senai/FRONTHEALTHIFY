@@ -33,7 +33,7 @@ export default function PerfilUsuario() {
     { icon: 'calendar-outline', label: 'Consultar Disponibilidade', route: '/MarcarConsulta' },
     { icon: 'document-text-outline', label: 'Questionário', route: '/questionario' },
     { icon: 'restaurant-outline', label: 'Plano Alimentar', route: '/plano-alimentar' },
-    { icon: 'barbell-outline', label: 'Treino', route: '/treino' },
+    { icon: 'water-outline', label: 'Hidratação', route: '/hidratacao' },
     { icon: 'stats-chart-outline', label: 'Progresso', route: '/progresso' },
     { icon: 'person-circle-outline', label: 'Perfil', route: '/perfilcliente' },
   ];

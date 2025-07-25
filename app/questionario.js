@@ -17,12 +17,29 @@ export const options = {
   headerShown: false,
 };
 
+// Botão do menu lateral
+const MenuButton = ({ icon, label, onPress }) => (
+  <TouchableOpacity style={styles.menuButton} onPress={onPress}>
+    <Ionicons name={icon} size={24} color="#097d4c" />
+    <Text style={styles.menuLabel}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const features = [
+  { icon: 'calendar-outline', label: 'Consultar Disponibilidade', route: '/MarcarConsulta' },
+  { icon: 'document-text-outline', label: 'Questionário', route: '/questionario' },
+  { icon: 'restaurant-outline', label: 'Plano Alimentar', route: '/plano-alimentar' },
+  { icon: 'water-outline', label: 'Hidratação', route: '/hidratacao' },
+  { icon: 'stats-chart-outline', label: 'Progresso', route: '/progresso' },
+  { icon: 'person-circle-outline', label: 'Perfil', route: '/perfilcliente' },
+];
+
 export default function Questionario() {
   const router = useRouter();
   const [respostas, setRespostas] = useState({});
   const [pageIndex, setPageIndex] = useState(0);
-  const [visibleQuestions, setVisibleQuestions] = useState([0, 1]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [showResumo, setShowResumo] = useState(false);
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -32,12 +49,11 @@ export default function Questionario() {
       useNativeDriver: true,
     }).start();
   }, [pageIndex]);
-  const [showResumo, setShowResumo] = useState(false);
 
   const perguntas = [
     {
       id: 'cafeDaManha',
-      texto: 'Você costuma tomar café da manhã?',
+      texto: '☀️ Você costuma tomar café da manhã?',
       opcoes: ['Sim', 'Às vezes', 'Não'],
     },
     {
@@ -63,7 +79,11 @@ export default function Questionario() {
     {
       id: 'atividadeFisica',
       texto: 'Você pratica atividades físicas regularmente?',
-      opcoes: ['Sim, mais de 3 vezes por semana', 'Sim, 1 a 2 vezes por semana', 'Não, quase nunca'],
+      opcoes: [
+        'Sim, mais de 3 vezes por semana',
+        'Sim, 1 a 2 vezes por semana',
+        'Não, quase nunca',
+      ],
     },
     {
       id: 'horasDeSono',
@@ -87,16 +107,16 @@ export default function Questionario() {
     },
     {
       id: 'descanso',
-      texto: 'Você tem momentos de descanso durante o seu dia?',
+      texto: 'Você tem momentos de descanso durante o seu dia? 🌿',
       opcoes: ['Sim, sempre', 'Às vezes', 'Não'],
     },
   ];
 
-  // Função que retorna sugestões baseadas na resposta de cada pergunta
   const obterSugestao = (id, resposta) => {
     switch (id) {
       case 'cafeDaManha':
-        if (resposta === 'Não') return 'Tente incluir um café da manhã para melhorar seu metabolismo.';
+        if (resposta === 'Não')
+          return 'Tente incluir um café da manhã para melhorar seu metabolismo.';
         if (resposta === 'Às vezes') return 'Procure tomar café da manhã com mais regularidade.';
         return 'Ótimo que você toma café da manhã!';
       case 'refeicoesPorDia':
@@ -150,117 +170,185 @@ export default function Questionario() {
     }));
   };
 
+  const verificarRespostasAtuais = () => {
+    const perguntasAtuaisIds = perguntas
+      .slice(pageIndex, pageIndex + 2)
+      .map(p => p.id);
+    
+    const perguntasNaoRespondidas = perguntasAtuaisIds.filter(id => !respostas[id]);
+
+    return perguntasNaoRespondidas;
+  };
+
   const avancarPerguntas = () => {
+    const naoRespondidas = verificarRespostasAtuais();
+
+    if (naoRespondidas.length > 0) {
+      const nomesPerguntas = naoRespondidas.map(id => {
+        const pergunta = perguntas.find(p => p.id === id);
+        return pergunta ? `"${pergunta.texto.split('?')[0]}?"` : '';
+      }).join('\n- ');
+      Alert.alert(
+        'Atenção',
+        `Por favor, responda as seguintes perguntas antes de avançar:\n- ${nomesPerguntas}`
+      );
+      return;
+    }
+
     if (pageIndex + 2 < perguntas.length) {
       setPageIndex(pageIndex + 2);
-      setVisibleQuestions([pageIndex + 2, pageIndex + 3]);
+    }
+  };
 
-      fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
+  const voltarPerguntas = () => {
+    if (pageIndex - 2 >= 0) {
+      setPageIndex(pageIndex - 2);
     }
   };
 
   const abrirResumo = () => {
-    // Só abre se todas as perguntas estiverem respondidas
-    if (Object.keys(respostas).length < perguntas.length) {
-      Alert.alert('Atenção', 'Por favor, responda todas as perguntas antes de ver o resumo.');
+    const todasPerguntasNaoRespondidas = perguntas.filter(p => !respostas[p.id]);
+
+    if (todasPerguntasNaoRespondidas.length > 0) {
+      const nomesPerguntas = todasPerguntasNaoRespondidas.map(p => {
+        return `"${p.texto.split('?')[0]}?"`;
+      }).join('\n- ');
+      Alert.alert(
+        'Atenção',
+        `Por favor, responda todas as perguntas antes de ver o resumo. Faltam:\n- ${nomesPerguntas}`
+      );
       return;
     }
     setShowResumo(true);
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* Botão Voltar para Dashboard */}
-      <TouchableOpacity style={styles.dashboardButton} onPress={() => router.push('/dashboard')}>
-        <Ionicons name="home" size={30} color="#097d4c" />
-      </TouchableOpacity>
+    <View style={styles.pageContainer}>
+      {/* Conteúdo principal (questionário) */}
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* Botão Voltar para Dashboard */}
+        <TouchableOpacity style={styles.dashboardButton} onPress={() => router.push('/dashboard')}>
+          <Ionicons name="home" size={30} color="#097d4c" />
+        </TouchableOpacity>
 
-      <Text style={styles.titulo}>Questionário de Rotina</Text>
+        <Text style={styles.titulo}>🌿 Questionário de Rotina Saudável 🌿</Text>
 
-      {/* Exibe as perguntas com animação de fade-in */}
-      {visibleQuestions.map((index) => {
-        const pergunta = perguntas[index];
-        if (!pergunta) return null;
-        return (
-          <Animated.View key={pergunta.id} style={{ opacity: fadeAnim }}>
-            <View style={styles.blocoPergunta}>
-              <Text style={styles.pergunta}>{pergunta.texto}</Text>
-              <View style={styles.opcoesContainer}>
-                {pergunta.opcoes.map((opcao) => (
-                  <TouchableOpacity
-                    key={opcao}
-                    style={[
-                      styles.opcaoBotao,
-                      respostas[pergunta.id] === opcao && styles.opcaoSelecionada,
-                    ]}
-                    onPress={() => responder(pergunta.id, opcao)}
-                  >
-                    <Text
+        {perguntas.slice(pageIndex, pageIndex + 2).map((pergunta) => {
+          return (
+            <Animated.View key={pergunta.id} style={{ opacity: fadeAnim }}>
+              <View style={styles.blocoPergunta}>
+                <Text style={styles.pergunta}>{pergunta.texto}</Text>
+                <View style={styles.opcoesContainer}>
+                  {pergunta.opcoes.map((opcao) => (
+                    <TouchableOpacity
+                      key={opcao}
                       style={[
-                        styles.opcaoTexto,
-                        respostas[pergunta.id] === opcao && styles.opcaoTextoSelecionado,
+                        styles.opcaoBotao,
+                        respostas[pergunta.id] === opcao && styles.opcaoSelecionada,
                       ]}
+                      onPress={() => responder(pergunta.id, opcao)}
                     >
-                      {opcao}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </Animated.View>
-        );
-      })}
-
-      {/* Botão "Próximo" ou "Ver seu resumo" */}
-      <TouchableOpacity
-        style={styles.botaoEnviar}
-        onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : abrirResumo}
-      >
-        <Text style={styles.botaoTexto}>
-          {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Modal para o resumo */}
-      <Modal
-        visible={showResumo}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowResumo(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitulo}>Seu Resumo</Text>
-            <ScrollView style={{ maxHeight: 400, marginBottom: 20 }}>
-              {perguntas.map(({ id, texto }) => (
-                <View key={id} style={{ marginBottom: 15 }}>
-                  <Text style={styles.pergunta}>{texto}</Text>
-                  <Text style={{ fontWeight: '600', marginBottom: 5 }}>
-                    Resposta: {respostas[id]}
-                  </Text>
-                  <Text style={{ fontStyle: 'italic', color: '#555' }}>
-                    {obterSugestao(id, respostas[id])}
-                  </Text>
+                      <Text
+                        style={[
+                          styles.opcaoTexto,
+                          respostas[pergunta.id] === opcao && styles.opcaoTextoSelecionado,
+                        ]}
+                      >
+                        {opcao}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              ))}
-            </ScrollView>
+              </View>
+            </Animated.View>
+          );
+        })}
 
-            <Pressable style={styles.botaoFechar} onPress={() => setShowResumo(false)}>
-              <Text style={styles.botaoTexto}>Fechar</Text>
-            </Pressable>
-          </View>
+        <View style={styles.navigationButtonsContainer}>
+          {pageIndex > 0 ? (
+            <>
+              <TouchableOpacity style={styles.botaoVoltar} onPress={voltarPerguntas}>
+                <Text style={styles.botaoTexto}>Voltar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.botaoEnviar}
+                onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : abrirResumo}
+              >
+                <Text style={styles.botaoTexto}>
+                  {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={[styles.botaoEnviar, { alignSelf: 'flex-end' }]} // Ajusta o alinhamento para a direita
+              onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : abrirResumo}
+            >
+              <Text style={styles.botaoTexto}>
+                {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
-      </Modal>
-    </ScrollView>
+
+        {/* Modal Resumo */}
+        <Modal
+          visible={showResumo}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowResumo(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitulo}>Seu Resumo</Text>
+              <ScrollView style={{ maxHeight: 400, marginBottom: 20 }}>
+                {perguntas.map(({ id, texto }) => (
+                  <View key={id} style={{ marginBottom: 15 }}>
+                    <Text style={styles.pergunta}>{texto}</Text>
+                    <Text style={{ fontWeight: '600', marginBottom: 5 }}>
+                      Resposta: {respostas[id] || 'Não respondido'}
+                    </Text>
+                    <Text style={{ fontStyle: 'italic', color: '#555' }}>
+                      {obterSugestao(id, respostas[id])}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+              <Pressable style={styles.botaoFechar} onPress={() => setShowResumo(false)}>
+                <Text style={styles.botaoTexto}>Fechar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      </ScrollView>
+
+      {/* Menu lateral */}
+      <View style={styles.rightMenu}>
+        {features.map((item, index) => (
+          <MenuButton
+            key={index}
+            icon={item.icon}
+            label={item.label}
+            onPress={() => router.push(item.route)}
+          />
+        ))}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  pageContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#f6eecf',
+  },
+  container: {
+    flexGrow: 1,
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
   dashboardButton: {
     position: 'absolute',
     top: 30,
@@ -268,14 +356,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     padding: 10,
     zIndex: 100,
-  },
-  container: {
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    backgroundColor: '#f6eecf',
-    alignItems: 'center',
-    flexGrow: 1,
-    position: 'relative',
   },
   titulo: {
     fontSize: 28,
@@ -331,17 +411,34 @@ const styles = StyleSheet.create({
   opcaoTextoSelecionado: {
     color: '#fff',
   },
+  navigationButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
   botaoEnviar: {
     backgroundColor: '#097d4c',
     paddingVertical: 12,
     paddingHorizontal: 40,
     borderRadius: 10,
-    marginTop: 30,
+    alignSelf: 'center',
+    minWidth: 120,
+  },
+  botaoVoltar: {
+    backgroundColor: '#888',
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 10,
+    alignSelf: 'center',
+    minWidth: 120,
   },
   botaoTexto: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -370,5 +467,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
+  },
+
+  // Estilos do menu lateral CORRIGIDOS
+  rightMenu: {
+    width: 240,
+    backgroundColor: '#f6eecf',
+    paddingVertical: 30,
+    paddingHorizontal: 10,
+    borderLeftWidth: 2,
+    borderLeftColor: '#006D38',
+    alignItems: 'flex-start',
+  },
+  menuButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+    borderRadius: 8,
+    width: '100%',
+  },
+  menuLabel: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#006D38',
+    fontWeight: '600',
   },
 });
