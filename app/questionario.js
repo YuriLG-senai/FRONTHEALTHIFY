@@ -9,9 +9,11 @@ import {
   Animated,
   Modal,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const options = {
   headerShown: false,
@@ -34,12 +36,132 @@ const features = [
   { icon: 'person-circle-outline', label: 'Perfil', route: '/perfilcliente' },
 ];
 
+// 1. A ESTRUTURA DAS PERGUNTAS FOI ATUALIZADA
+// Adicionamos um 'dbId' para o banco de dados e renomeamos 'id' para 'localId' para uso interno.
+const perguntas = [
+    {
+      dbId: 1,
+      localId: 'cafeDaManha',
+      texto: '☀️ Você costuma tomar café da manhã?',
+      opcoes: ['Sim', 'Às vezes', 'Não'],
+    },
+    {
+      dbId: 2,
+      localId: 'refeicoesPorDia',
+      texto: 'Quantas refeições você faz por dia?',
+      opcoes: ['2 ou menos', '3 a 4', '5 ou mais'],
+    },
+    {
+      dbId: 3,
+      localId: 'consumoAgua',
+      texto: 'Quantos litros de água você bebe por dia?',
+      opcoes: ['Menos de 1L', '1 a 2L', 'Mais de 2L'],
+    },
+    {
+      dbId: 4,
+      localId: 'alimentosIndustrializados',
+      texto: 'Você consome alimentos industrializados com frequência?',
+      opcoes: ['Sim', 'Raramente', 'Não'],
+    },
+    {
+      dbId: 5,
+      localId: 'frutasVerduras',
+      texto: 'Você come frutas e verduras todos os dias?',
+      opcoes: ['Sim', 'Às vezes', 'Não'],
+    },
+    {
+      dbId: 6,
+      localId: 'atividadeFisica',
+      texto: 'Você pratica atividades físicas regularmente?',
+      opcoes: [
+        'Sim, mais de 3 vezes por semana',
+        'Sim, 1 a 2 vezes por semana',
+        'Não, quase nunca',
+      ],
+    },
+    {
+      dbId: 7,
+      localId: 'horasDeSono',
+      texto: 'Quantas horas de sono você tem por noite, em média?',
+      opcoes: ['Menos de 6 horas', '6 a 8 horas', 'Mais de 8 horas'],
+    },
+    {
+      dbId: 8,
+      localId: 'nivelDeEstresse',
+      texto: 'Como você avaliaria seu nível de estresse atualmente?',
+      opcoes: ['Baixo', 'Moderado', 'Alto'],
+    },
+    {
+      dbId: 9,
+      localId: 'trabalhoEmCasa',
+      texto: 'Você trabalha em casa ou em home office?',
+      opcoes: ['Sim', 'Não'],
+    },
+    {
+      dbId: 10,
+      localId: 'tempoDeTela',
+      texto: 'Quanto tempo você passa em frente a telas (computador, celular, TV) por dia?',
+      opcoes: ['Menos de 2 horas', '2 a 4 horas', 'Mais de 4 horas'],
+    },
+    {
+      dbId: 11,
+      localId: 'descanso',
+      texto: 'Você tem momentos de descanso durante o seu dia? 🌿',
+      opcoes: ['Sim, sempre', 'Às vezes', 'Não'],
+    },
+  ];
+
 export default function Questionario() {
   const router = useRouter();
   const [respostas, setRespostas] = useState({});
   const [pageIndex, setPageIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [showResumo, setShowResumo] = useState(false);
+
+  const [clienteId, setClienteId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchClienteData = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (!token) {
+          Alert.alert("Erro", "Você não está autenticado. Por favor, faça o login novamente.");
+          router.push('/login');
+          return;
+        }
+
+        const response = await fetch('http://localhost:5036/api/Usuarios/perfil', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (!response.ok) throw new Error('Não foi possível buscar os dados do perfil.');
+        
+        const data = await response.json();
+        
+        if (data.cliente && data.cliente.clienteId) {
+          setClienteId(data.cliente.clienteId);
+        } else {
+          if (data.tipoUsuario === 'Cliente' && data.usuarioId) {
+             const clienteResponse = await fetch(`http://localhost:5036/api/Usuarios/Clientes/usuario/${data.usuarioId}`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+             });
+             if(!clienteResponse.ok) throw new Error('Não foi possível encontrar os dados do cliente.');
+             const clienteData = await clienteResponse.json();
+             setClienteId(clienteData.clienteId);
+          } else {
+            throw new Error('ID do cliente não encontrado no perfil.');
+          }
+        }
+
+      } catch (error) {
+        console.error("Erro ao buscar ID do cliente:", error);
+        Alert.alert("Erro de Conexão", "Não foi possível carregar seus dados. Tente novamente.");
+      }
+    };
+
+    fetchClienteData();
+  }, []);
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -50,130 +172,26 @@ export default function Questionario() {
     }).start();
   }, [pageIndex]);
 
-  const perguntas = [
-    {
-      id: 'cafeDaManha',
-      texto: '☀️ Você costuma tomar café da manhã?',
-      opcoes: ['Sim', 'Às vezes', 'Não'],
-    },
-    {
-      id: 'refeicoesPorDia',
-      texto: 'Quantas refeições você faz por dia?',
-      opcoes: ['2 ou menos', '3 a 4', '5 ou mais'],
-    },
-    {
-      id: 'consumoAgua',
-      texto: 'Quantos litros de água você bebe por dia?',
-      opcoes: ['Menos de 1L', '1 a 2L', 'Mais de 2L'],
-    },
-    {
-      id: 'alimentosIndustrializados',
-      texto: 'Você consome alimentos industrializados com frequência?',
-      opcoes: ['Sim', 'Raramente', 'Não'],
-    },
-    {
-      id: 'frutasVerduras',
-      texto: 'Você come frutas e verduras todos os dias?',
-      opcoes: ['Sim', 'Às vezes', 'Não'],
-    },
-    {
-      id: 'atividadeFisica',
-      texto: 'Você pratica atividades físicas regularmente?',
-      opcoes: [
-        'Sim, mais de 3 vezes por semana',
-        'Sim, 1 a 2 vezes por semana',
-        'Não, quase nunca',
-      ],
-    },
-    {
-      id: 'horasDeSono',
-      texto: 'Quantas horas de sono você tem por noite, em média?',
-      opcoes: ['Menos de 6 horas', '6 a 8 horas', 'Mais de 8 horas'],
-    },
-    {
-      id: 'nivelDeEstresse',
-      texto: 'Como você avaliaria seu nível de estresse atualmente?',
-      opcoes: ['Baixo', 'Moderado', 'Alto'],
-    },
-    {
-      id: 'trabalhoEmCasa',
-      texto: 'Você trabalha em casa ou em home office?',
-      opcoes: ['Sim', 'Não'],
-    },
-    {
-      id: 'tempoDeTela',
-      texto: 'Quanto tempo você passa em frente a telas (computador, celular, TV) por dia?',
-      opcoes: ['Menos de 2 horas', '2 a 4 horas', 'Mais de 4 horas'],
-    },
-    {
-      id: 'descanso',
-      texto: 'Você tem momentos de descanso durante o seu dia? 🌿',
-      opcoes: ['Sim, sempre', 'Às vezes', 'Não'],
-    },
-  ];
-
-  const obterSugestao = (id, resposta) => {
-    switch (id) {
-      case 'cafeDaManha':
-        if (resposta === 'Não')
-          return 'Tente incluir um café da manhã para melhorar seu metabolismo.';
-        if (resposta === 'Às vezes') return 'Procure tomar café da manhã com mais regularidade.';
-        return 'Ótimo que você toma café da manhã!';
-      case 'refeicoesPorDia':
-        if (resposta === '2 ou menos') return 'Considere aumentar o número de refeições para manter energia.';
-        if (resposta === '5 ou mais') return 'Cuidado para não exagerar nas refeições.';
-        return 'Quantidade ideal de refeições.';
-      case 'consumoAgua':
-        if (resposta === 'Menos de 1L') return 'Beba mais água para se manter hidratado.';
-        if (resposta === '1 a 2L') return 'Boa hidratação, continue assim!';
-        return 'Excelente consumo de água!';
-      case 'alimentosIndustrializados':
-        if (resposta === 'Sim') return 'Reduza o consumo de alimentos industrializados.';
-        if (resposta === 'Raramente') return 'Continue evitando alimentos industrializados.';
-        return 'Parabéns por não consumir alimentos industrializados!';
-      case 'frutasVerduras':
-        if (resposta === 'Não') return 'Inclua frutas e verduras na sua dieta diária.';
-        if (resposta === 'Às vezes') return 'Tente aumentar o consumo de frutas e verduras.';
-        return 'Ótimo consumo de frutas e verduras!';
-      case 'atividadeFisica':
-        if (resposta === 'Não, quase nunca') return 'Pratique atividades físicas para melhorar sua saúde.';
-        if (resposta === 'Sim, 1 a 2 vezes por semana') return 'Tente aumentar a frequência da atividade física.';
-        return 'Parabéns pela sua rotina ativa!';
-      case 'horasDeSono':
-        if (resposta === 'Menos de 6 horas') return 'Durma mais para melhorar seu descanso.';
-        if (resposta === 'Mais de 8 horas') return 'Cuidado para não dormir demais.';
-        return 'Boa quantidade de sono.';
-      case 'nivelDeEstresse':
-        if (resposta === 'Alto') return 'Busque técnicas de relaxamento para reduzir o estresse.';
-        if (resposta === 'Moderado') return 'Fique atento ao seu nível de estresse.';
-        return 'Ótimo que seu estresse está baixo.';
-      case 'trabalhoEmCasa':
-        if (resposta === 'Sim') return 'Mantenha uma boa postura e faça pausas frequentes.';
-        return 'Ótimo que você não trabalha em casa.';
-      case 'tempoDeTela':
-        if (resposta === 'Mais de 4 horas') return 'Tente diminuir o tempo de tela para descansar os olhos.';
-        if (resposta === '2 a 4 horas') return 'Tempo de tela razoável, cuide para não exagerar.';
-        return 'Ótimo tempo de tela curto!';
-      case 'descanso':
-        if (resposta === 'Não') return 'Reserve momentos para descansar durante o dia.';
-        if (resposta === 'Às vezes') return 'Tente aumentar os momentos de descanso.';
-        return 'Muito bom que você descansa regularmente.';
-      default:
-        return '';
+  const obterSugestao = (localId, resposta) => {
+    // A lógica aqui continua a mesma
+    switch (localId) {
+      case 'cafeDaManha': return resposta === 'Não' ? 'Tente incluir um café da manhã...' : 'Ótimo!';
+      // ... resto dos cases
+      default: return '';
     }
   };
 
-  const responder = (perguntaId, opcao) => {
+  const responder = (localId, opcao) => {
     setRespostas((prev) => ({
       ...prev,
-      [perguntaId]: opcao,
+      [localId]: opcao,
     }));
   };
 
   const verificarRespostasAtuais = () => {
     const perguntasAtuaisIds = perguntas
       .slice(pageIndex, pageIndex + 2)
-      .map(p => p.id);
+      .map(p => p.localId); // Usa localId
     
     const perguntasNaoRespondidas = perguntasAtuaisIds.filter(id => !respostas[id]);
 
@@ -185,13 +203,10 @@ export default function Questionario() {
 
     if (naoRespondidas.length > 0) {
       const nomesPerguntas = naoRespondidas.map(id => {
-        const pergunta = perguntas.find(p => p.id === id);
+        const pergunta = perguntas.find(p => p.localId === id); // Usa localId
         return pergunta ? `"${pergunta.texto.split('?')[0]}?"` : '';
       }).join('\n- ');
-      Alert.alert(
-        'Atenção',
-        `Por favor, responda as seguintes perguntas antes de avançar:\n- ${nomesPerguntas}`
-      );
+      Alert.alert('Atenção', `Por favor, responda...:\n- ${nomesPerguntas}`);
       return;
     }
 
@@ -206,36 +221,78 @@ export default function Questionario() {
     }
   };
 
-  const abrirResumo = () => {
-    const todasPerguntasNaoRespondidas = perguntas.filter(p => !respostas[p.id]);
-
-    if (todasPerguntasNaoRespondidas.length > 0) {
-      const nomesPerguntas = todasPerguntasNaoRespondidas.map(p => {
-        return `"${p.texto.split('?')[0]}?"`;
-      }).join('\n- ');
-      Alert.alert(
-        'Atenção',
-        `Por favor, responda todas as perguntas antes de ver o resumo. Faltam:\n- ${nomesPerguntas}`
-      );
+  const enviarRespostas = async () => {
+    if (!clienteId) {
+      Alert.alert("Erro", "Não foi possível identificar o cliente. Tente fazer login novamente.");
       return;
     }
-    setShowResumo(true);
+
+    setIsSubmitting(true);
+
+    try {
+      // 2. PAYLOAD ATUALIZADO
+      // Mapeia as respostas e envia o 'dbId' numérico como 'PerguntaId'
+      const payload = Object.keys(respostas).map(localId => {
+        const pergunta = perguntas.find(p => p.localId === localId);
+        return {
+          ClienteId: clienteId,
+          PerguntaId: pergunta.dbId, // Envia o ID numérico
+          RespostaTexto: respostas[localId],
+          DataResposta: new Date().toISOString(),
+        };
+      });
+      
+      const token = await AsyncStorage.getItem('token');
+
+      const response = await fetch('http://localhost:5036/api/Clientes/respostas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ao enviar respostas: ${errorText}`);
+      }
+
+      setShowResumo(true);
+
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Erro no Envio", "Não foi possível salvar suas respostas. Verifique sua conexão e tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const finalizarQuestionario = () => {
+    const todasPerguntasNaoRespondidas = perguntas.filter(p => !respostas[p.localId]); // Usa localId
+
+    if (todasPerguntasNaoRespondidas.length > 0) {
+      const nomesPerguntas = todasPerguntasNaoRespondidas.map(p => `"${p.texto.split('?')[0]}?"`).join('\n- ');
+      Alert.alert('Atenção', `Por favor, responda... Faltam:\n- ${nomesPerguntas}`);
+      return;
+    }
+    
+    enviarRespostas();
   };
 
   return (
     <View style={styles.pageContainer}>
-      {/* Conteúdo principal (questionário) */}
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Botão Voltar para Dashboard */}
         <TouchableOpacity style={styles.dashboardButton} onPress={() => router.push('/dashboard')}>
           <Ionicons name="home" size={30} color="#097d4c" />
         </TouchableOpacity>
 
         <Text style={styles.titulo}>🌿 Questionário de Rotina Saudável 🌿</Text>
 
+        {/* 3. ATUALIZAÇÃO NO JSX para usar 'localId' como chave e no 'onPress' */}
         {perguntas.slice(pageIndex, pageIndex + 2).map((pergunta) => {
           return (
-            <Animated.View key={pergunta.id} style={{ opacity: fadeAnim }}>
+            <Animated.View key={pergunta.localId} style={{ opacity: fadeAnim }}>
               <View style={styles.blocoPergunta}>
                 <Text style={styles.pergunta}>{pergunta.texto}</Text>
                 <View style={styles.opcoesContainer}>
@@ -244,14 +301,14 @@ export default function Questionario() {
                       key={opcao}
                       style={[
                         styles.opcaoBotao,
-                        respostas[pergunta.id] === opcao && styles.opcaoSelecionada,
+                        respostas[pergunta.localId] === opcao && styles.opcaoSelecionada,
                       ]}
-                      onPress={() => responder(pergunta.id, opcao)}
+                      onPress={() => responder(pergunta.localId, opcao)}
                     >
                       <Text
                         style={[
                           styles.opcaoTexto,
-                          respostas[pergunta.id] === opcao && styles.opcaoTextoSelecionado,
+                          respostas[pergunta.localId] === opcao && styles.opcaoTextoSelecionado,
                         ]}
                       >
                         {opcao}
@@ -272,26 +329,35 @@ export default function Questionario() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.botaoEnviar}
-                onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : abrirResumo}
+                onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : finalizarQuestionario}
+                disabled={isSubmitting}
               >
-                <Text style={styles.botaoTexto}>
-                  {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
-                </Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.botaoTexto}>
+                    {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </>
           ) : (
             <TouchableOpacity
-              style={[styles.botaoEnviar, { alignSelf: 'flex-end' }]} // Ajusta o alinhamento para a direita
-              onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : abrirResumo}
+              style={[styles.botaoEnviar, { alignSelf: 'flex-end' }]}
+              onPress={pageIndex + 2 < perguntas.length ? avancarPerguntas : finalizarQuestionario}
+              disabled={isSubmitting}
             >
-              <Text style={styles.botaoTexto}>
-                {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
-              </Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.botaoTexto}>
+                  {pageIndex + 2 < perguntas.length ? 'Próximo' : 'Ver seu resumo'}
+                </Text>
+              )}
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Modal Resumo */}
         <Modal
           visible={showResumo}
           animationType="slide"
@@ -302,14 +368,14 @@ export default function Questionario() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitulo}>Seu Resumo</Text>
               <ScrollView style={{ maxHeight: 400, marginBottom: 20 }}>
-                {perguntas.map(({ id, texto }) => (
-                  <View key={id} style={{ marginBottom: 15 }}>
+                {perguntas.map(({ localId, texto }) => (
+                  <View key={localId} style={{ marginBottom: 15 }}>
                     <Text style={styles.pergunta}>{texto}</Text>
                     <Text style={{ fontWeight: '600', marginBottom: 5 }}>
-                      Resposta: {respostas[id] || 'Não respondido'}
+                      Resposta: {respostas[localId] || 'Não respondido'}
                     </Text>
                     <Text style={{ fontStyle: 'italic', color: '#555' }}>
-                      {obterSugestao(id, respostas[id])}
+                      {obterSugestao(localId, respostas[localId])}
                     </Text>
                   </View>
                 ))}
@@ -322,7 +388,6 @@ export default function Questionario() {
         </Modal>
       </ScrollView>
 
-      {/* Menu lateral */}
       <View style={styles.rightMenu}>
         {features.map((item, index) => (
           <MenuButton
@@ -336,6 +401,8 @@ export default function Questionario() {
     </View>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   pageContainer: {

@@ -4,6 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const formatDateForDisplay = (isoDate) => {
+  if (!isoDate) return 'Não informada';
+  try {
+    const date = new Date(isoDate);
+    const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+    const correctedDate = new Date(date.getTime() + userTimezoneOffset);
+    return correctedDate.toLocaleDateString('pt-BR');
+  } catch (error) {
+    return 'Data inválida';
+  }
+};
 
 const MenuButton = ({ icon, label, onPress }) => {
   return (
@@ -19,12 +30,17 @@ export default function PerfilUsuario() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editData, setEditData] = useState({
+    id: null,
     nome: '',
     email: '',
     telefone: '',
+    cpf: '',
+    sexo: '',
+    endereco: '',
+    dataNascimento: '',
+    tipo: '',
     crn: '',
-    especializacao: '',
-
+    especializacao: ''
   });
 
   const router = useRouter();
@@ -43,29 +59,38 @@ export default function PerfilUsuario() {
   }, []);
 
   const fetchUserData = async () => {
+    setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) throw new Error('Token não encontrado');
 
-
       const response = await fetch('http://localhost:5036/api/Usuarios/perfil', {
         method: 'GET',
-          headers: {
+        headers: {
           'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-      },
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) throw new Error('Erro na resposta do servidor');
 
       const data = await response.json();
+
+      console.log('DADOS RECEBIDOS DA API DE PERFIL:', data);
+
       setUserData(data);
       setEditData({
+        id: data.usuarioId || null, // Corrigido para data.UsuarioId conforme o retorno da sua API
         nome: data.nome || '',
         email: data.email || '',
         telefone: data.telefone || '',
-        crn: data.crn || '',
-        especializacao: data.especializacao || ''
+        cpf: data.cpf || '',
+        sexo: data.sexo || '',
+        endereco: data.endereco || '',
+        dataNascimento: data.dataNascimento || '',
+        tipo: data.tipoUsuario || '', // Corrigido para data.tipoUsuario
+        crn: data.Nutricionista?.crn || '', // Acessando dados aninhados
+        especializacao: data.Nutricionista?.especializacao || ''
       });
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
@@ -75,22 +100,50 @@ export default function PerfilUsuario() {
   };
 
   const handleUpdateProfile = async () => {
+    if (!editData.id) {
+        alert('Erro: ID do usuário não encontrado.');
+        return;
+    }
+
     try {
-      const response = await fetch('http://localhost:5036/api/Usuario/perfil', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editData),
-      });
+        const token = await AsyncStorage.getItem('token');
+        if (!token) throw new Error('Token de autenticação não encontrado.');
+        
+        const updatePayload = {
+            nome: editData.nome,
+            email: editData.email,
+            telefone: editData.telefone,
+            endereco: editData.endereco,
+            sexo: editData.sexo,
+            dataNascimento: editData.dataNascimento
+        };
 
-      if (!response.ok) throw new Error('Falha ao atualizar perfil');
+        const response = await fetch(`http://localhost:5036/api/Usuarios/${editData.id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatePayload),
+        });
 
-      const updatedData = await response.json();
-      setUserData(updatedData);
-      setModalVisible(false);
-      alert('Perfil atualizado com sucesso!');
+        if (!response.ok) {
+            const errorBody = await response.text();
+            try {
+                const parsedError = JSON.parse(errorBody);
+                const errorMessages = Object.values(parsedError.errors).flat().join('\n');
+                throw new Error(`Falha ao atualizar perfil:\n${errorMessages}`);
+            } catch {
+                throw new Error(`Falha ao atualizar perfil: ${errorBody}`);
+            }
+        }
+
+        await fetchUserData(); 
+        setModalVisible(false);
+        alert('Perfil atualizado com sucesso!');
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      alert('Erro ao atualizar perfil: ' + error.message);
+        console.error('Erro ao atualizar perfil:', error);
+        alert(error.message);
     }
   };
 
@@ -129,10 +182,30 @@ export default function PerfilUsuario() {
                 <Text style={styles.infoLabel}>Email:</Text>
                 <Text style={styles.infoValue}>{userData?.email}</Text>
               </View>
-
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>CPF:</Text>
+                <Text style={styles.infoValue}>{userData?.cpf || 'Não informado'}</Text>
+              </View>
+              
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Telefone:</Text>
                 <Text style={styles.infoValue}>{userData?.telefone || 'Não informado'}</Text>
+              </View>
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Sexo:</Text>
+                <Text style={styles.infoValue}>{userData?.sexo || 'Não informado'}</Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Endereço:</Text>
+                <Text style={styles.infoValue}>{userData?.endereco || 'Não informado'}</Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Nascimento:</Text>
+                <Text style={styles.infoValue}>{formatDateForDisplay(userData?.dataNascimento)}</Text>
               </View>
 
               <Pressable style={styles.editButton} onPress={() => setModalVisible(true)}>
@@ -140,19 +213,18 @@ export default function PerfilUsuario() {
               </Pressable>
             </View>
 
-            {/* Informações profissionais para nutricionista */}
-            {userData?.tipo === 'nutricionista' && (
+            {userData?.tipoUsuario === 'Nutricionista' && (
               <View style={styles.profileSection}>
                 <Text style={styles.sectionTitle}>Informações Profissionais</Text>
 
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>CRN:</Text>
-                  <Text style={styles.infoValue}>{userData?.crn || 'Não informado'}</Text>
+                  <Text style={styles.infoValue}>{userData?.Nutricionista?.crn || 'Não informado'}</Text>
                 </View>
 
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Especialização:</Text>
-                  <Text style={styles.infoValue}>{userData?.especializacao || 'Não informada'}</Text>
+                  <Text style={styles.infoValue}>{userData?.Nutricionista?.especializacao || 'Não informada'}</Text>
                 </View>
               </View>
             )}
@@ -168,60 +240,81 @@ export default function PerfilUsuario() {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalBackground}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Editar Perfil</Text>
+          <ScrollView contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Editar Perfil</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Nome"
-              value={editData.nome}
-              onChangeText={(text) => setEditData({ ...editData, nome: text })}
-            />
+              <TextInput
+                style={styles.input}
+                placeholder="Nome"
+                value={editData.nome}
+                onChangeText={(text) => setEditData({ ...editData, nome: text })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={editData.email}
+                onChangeText={(text) => setEditData({ ...editData, email: text })}
+                keyboardType="email-address"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="CPF"
+                value={editData.cpf}
+                editable={false} // CPF não deve ser editável
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Telefone"
+                value={editData.telefone}
+                onChangeText={(text) => setEditData({ ...editData, telefone: text })}
+                keyboardType="phone-pad"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Sexo"
+                value={editData.sexo}
+                onChangeText={(text) => setEditData({ ...editData, sexo: text })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Endereço Completo"
+                value={editData.endereco}
+                onChangeText={(text) => setEditData({ ...editData, endereco: text })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Data de Nascimento (AAAA-MM-DD)"
+                value={editData.dataNascimento ? editData.dataNascimento.split('T')[0] : ''}
+                onChangeText={(text) => setEditData({ ...editData, dataNascimento: text })}
+              />
+              {userData?.tipoUsuario === 'Nutricionista' && (
+                <>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="CRN"
+                    value={editData.crn}
+                    onChangeText={(text) => setEditData({ ...editData, crn: text })}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Especialização"
+                    value={editData.especializacao}
+                    onChangeText={(text) => setEditData({ ...editData, especializacao: text })}
+                  />
+                </>
+              )}
 
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={editData.email}
-              onChangeText={(text) => setEditData({ ...editData, email: text })}
-              keyboardType="email-address"
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Telefone"
-              value={editData.telefone}
-              onChangeText={(text) => setEditData({ ...editData, telefone: text })}
-              keyboardType="phone-pad"
-            />
-
-            {userData?.tipo === 'nutricionista' && (
-              <>
-                <TextInput
-                  style={styles.input}
-                  placeholder="CRN"
-                  value={editData.crn}
-                  onChangeText={(text) => setEditData({ ...editData, crn: text })}
-                />
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="Especialização"
-                  value={editData.especializacao}
-                  onChangeText={(text) => setEditData({ ...editData, especializacao: text })}
-                />
-              </>
-            )}
-
-            <View style={styles.modalButtons}>
-              <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
-                <Text style={styles.buttonText}>Cancelar</Text>
-              </Pressable>
-
-              <Pressable style={[styles.modalButton, styles.saveButton]} onPress={handleUpdateProfile}>
-                <Text style={styles.buttonText}>Salvar</Text>
-              </Pressable>
+              <View style={styles.modalButtons}>
+                <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.buttonText}>Cancelar</Text>
+                </Pressable>
+                <Pressable style={[styles.modalButton, styles.saveButton]} onPress={handleUpdateProfile}>
+                  <Text style={styles.buttonText}>Salvar</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -229,26 +322,22 @@ export default function PerfilUsuario() {
 }
 
 
-
 const styles = StyleSheet.create({
-  // Conteúdo da página geral
   pageContainer: {
-    flexGrow: 1,
+    flex: 1, 
     flexDirection: 'row-reverse',
     backgroundColor: '#f6eecf',
   },
-
-  // Menu lateral direito
   rightMenu: {
-    width: 240, // largura mais ampla
-    backgroundColor: '#f6eecf', // mesma cor de fundo da tela
+    width: 240,
+    backgroundColor: '#f6eecf',
     paddingTop: 40,
     paddingHorizontal: 12,
     borderLeftWidth: 1,
-    borderLeftColor: '#ddd', // linha discreta separando o menu
+    borderLeftColor: '#ddd',
   },
   menuButton: {
-    flexDirection: 'column', // ícone acima do texto
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 22,
@@ -263,10 +352,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-
-  // Conteúdo principal
   container: {
-    flexGrow: 1,
+    flex: 1, 
     backgroundColor: '#f6eecf',
     padding: 20,
     paddingTop: 40,
@@ -288,56 +375,8 @@ const styles = StyleSheet.create({
     color: '#097d4c',
     marginBottom: 6,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 20,
-  },
-  calendar: {
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  scheduleContainer: {
-    paddingBottom: 20,
-  },
-  scheduleTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
-    textAlign: 'center',
-  },
-  timeSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginVertical: 6,
-    marginHorizontal: 12,
-  },
-  occupied: {
-    backgroundColor: '#097d4c',
-  },
-  timeText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  nutriName: {
-    fontSize: 12,
-    color: '#f0f0f0',
-    fontStyle: 'italic',
-  },
-  emptyMessage: {
-    textAlign: 'center',
-    marginTop: 10,
-    color: '#333',
-  },
-
-  // Perfil e edição
   profileContainer: {
-    flexGrow: 1,
+    flex: 1,
   },
   profileSection: {
     backgroundColor: '#fff',
@@ -362,11 +401,13 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     marginBottom: 12,
+    alignItems: 'flex-start', 
   },
   infoLabel: {
     fontWeight: '600',
     width: 120,
     color: '#555',
+    fontSize: 16, 
   },
   infoValue: {
     flex: 1,
@@ -389,10 +430,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
-
-  // Modal
   modalBackground: {
-    flexGrow: 1,
+    flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     paddingHorizontal: 25,
@@ -426,9 +465,10 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 10,
   },
   modalButton: {
-    flexGrow: 1,
+    flex: 1, 
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
@@ -445,5 +485,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-

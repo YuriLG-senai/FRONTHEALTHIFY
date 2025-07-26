@@ -11,6 +11,34 @@ DROP TABLE IF EXISTS Receitas;
 DROP TABLE IF EXISTS PlanoReceitas;
 DROP TABLE IF EXISTS ProgressoCliente;
 
+
+CREATE TABLE IF NOT EXISTS Perguntas (
+    PerguntaId INT PRIMARY KEY,
+    Texto VARCHAR(255) NOT NULL
+);
+INSERT INTO Perguntas (PerguntaId, Texto) VALUES
+(1, '☀️ Você costuma tomar café da manhã?'),
+(2, 'Quantas refeições você faz por dia?'),
+(3, 'Quantos litros de água você bebe por dia?'),
+(4, 'Você consome alimentos industrializados com frequência?'),
+(5, 'Você come frutas e verduras todos os dias?'),
+(6, 'Você pratica atividades físicas regularmente?'),
+(7, 'Quantas horas de sono você tem por noite, em média?'),
+(8, 'Como você avaliaria seu nível de estresse atualmente?'),
+(9, 'Você trabalha em casa ou em home office?'),
+(10, 'Quanto tempo você passa em frente a telas (computador, celular, TV) por dia?'),
+(11, 'Você tem momentos de descanso durante o seu dia? 🌿');
+
+CREATE TABLE IF NOT EXISTS QuestionarioRespostas (
+    QuestionarioRespostaId INT PRIMARY KEY AUTO_INCREMENT,
+    ClienteId INT NOT NULL,
+    PerguntaId INT NOT NULL,
+    RespostaTexto VARCHAR(255) NOT NULL,
+    DataResposta DATETIME NOT NULL,
+    FOREIGN KEY (ClienteId) REFERENCES Clientes(ClienteId),
+    FOREIGN KEY (PerguntaId) REFERENCES Perguntas(PerguntaId)
+);
+
 CREATE TABLE Usuarios (
     UsuarioId INT AUTO_INCREMENT PRIMARY KEY,
     Nome VARCHAR(100) NOT NULL,
@@ -138,4 +166,5 @@ CREATE INDEX idx_consulta_data ON Consultas(DataConsulta);
 SELECT * FROM Usuarios;
 SELECT * FROM Clientes;
 SELECT * FROM Nutricionistas;
-SELECT * FROM Consultas;
+SELECT * FROM Perguntas;
+SELECT * FROM QuestionarioRespostas;

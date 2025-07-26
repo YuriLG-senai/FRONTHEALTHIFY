@@ -14,6 +14,10 @@ export default function ConsultarDisponibilidade() {
   const [nutricionistasData, setNutricionistasData] = useState({});
   const [clienteIdLogado, setClienteIdLogado] = useState(null);
 
+  // --- NOVO ESTADO ADICIONADO ---
+  // Controla o carregamento inicial das marcações do calendário
+  const [isLoadingCalendar, setIsLoadingCalendar] = useState(true);
+
 
   const fetchUsuarioLogado = async () => {
     try {
@@ -55,33 +59,20 @@ export default function ConsultarDisponibilidade() {
       if (!res.ok) throw new Error('Erro ao buscar consultas');
       const todasConsultas = await res.json();
 
-
-      console.log("Todas as consultas:", todasConsultas);
-      console.log("Cliente logado ID:", clienteIdLogado);
-
-      // Filtra consultas só do cliente logado
       const consultasCliente = todasConsultas.filter(
         c => String(c.clienteId) === String(clienteIdLogado)
       );
 
-      console.log("Consultas do cliente filtradas:", consultasCliente);
-
       const datasMarcadas = {};
-
 
       consultasCliente.forEach(c => {
         const data = c.dataConsulta.split('T')[0];
-        console.log("Data extraída da consulta:", data);
-
-
         datasMarcadas[data] = {
           marked: true,
           dotColor: '#cc3b3b',
-          selected: true,
+          selected: selectedDate === data, // Mantém a seleção se for o dia clicado
         };
       });
-
-      console.log("Datas marcadas a setar:", datasMarcadas);
 
       setMarkedDates(datasMarcadas);
     } catch (err) {
@@ -89,30 +80,16 @@ export default function ConsultarDisponibilidade() {
     }
   };
 
-  // Busca telefone do nutricionista (para exibir junto)
-  const fetchTelefoneUsuario = async (usuarioId) => {
-    try {
-      const res = await fetch(`http://localhost:5036/api/Usuarios/${usuarioId}`);
-      if (!res.ok) throw new Error('Erro ao buscar usuário');
-      const usuario = await res.json();
-      return usuario.telefone || null;
-    } catch (e) {
-      console.error('Erro ao buscar telefone do usuário:', e);
-      return null;
-    }
-  };
-
-  // Busca dados do nutricionista e salva no estado para não buscar repetido
   const fetchDadosNutricionista = async (nutri) => {
     if (!nutri?.usuarioId) return null;
-
     if (nutricionistasData[nutri.usuarioId]) {
       return nutricionistasData[nutri.usuarioId];
     }
-
     try {
-      const telefone = await fetchTelefoneUsuario(nutri.usuarioId);
-      const dadosComTelefone = { ...nutri, telefone };
+      const res = await fetch(`http://localhost:5036/api/Usuarios/${nutri.usuarioId}`);
+      if (!res.ok) throw new Error('Erro ao buscar usuário');
+      const usuario = await res.json();
+      const dadosComTelefone = { ...nutri, telefone: usuario.telefone || null };
       setNutricionistasData(prev => ({
         ...prev,
         [nutri.usuarioId]: dadosComTelefone,
@@ -124,7 +101,6 @@ export default function ConsultarDisponibilidade() {
     }
   };
 
-  // Busca consultas do cliente logado filtradas pela data selecionada
   const fetchConsultasPorData = async (data) => {
     setLoading(true);
     try {
@@ -160,6 +136,23 @@ export default function ConsultarDisponibilidade() {
   const handleDateSelect = (day) => {
     const selected = day.dateString;
     setSelectedDate(selected);
+    
+    // Atualiza as marcações para destacar o dia selecionado
+    setMarkedDates(prev => {
+        const newMarked = {...prev};
+        // Remove a seleção antiga
+        Object.keys(newMarked).forEach(date => {
+            newMarked[date].selected = false;
+        });
+        // Adiciona a nova seleção
+        newMarked[selected] = {
+            ...newMarked[selected],
+            selected: true,
+            selectedColor: '#097d4c'
+        };
+        return newMarked;
+    });
+
     fetchConsultasPorData(selected);
   };
 
@@ -167,11 +160,15 @@ export default function ConsultarDisponibilidade() {
     fetchUsuarioLogado();
   }, []);
 
+  // --- LÓGICA DE CARREGAMENTO ATUALIZADA ---
   useEffect(() => {
     if (clienteIdLogado !== null && clienteIdLogado !== undefined) {
-      fetchDiasOcupados();
-    } else {
-      console.log("Cliente ID não definido ainda:", clienteIdLogado);
+      const loadInitialData = async () => {
+        setIsLoadingCalendar(true); // Inicia o loading do calendário
+        await fetchDiasOcupados();
+        setIsLoadingCalendar(false); // Finaliza o loading
+      };
+      loadInitialData();
     }
   }, [clienteIdLogado]);
 
@@ -179,7 +176,7 @@ export default function ConsultarDisponibilidade() {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#097d4c" />
-        <Text>Carregando usuário...</Text>
+        <Text style={styles.loadingText}>Carregando usuário...</Text>
       </View>
     );
   }
@@ -194,49 +191,70 @@ export default function ConsultarDisponibilidade() {
       <Text style={styles.title}>Quadro de Horários</Text>
       <Text style={styles.subtitle}>Selecione uma data marcada para ver os horários.</Text>
 
-      <Calendar
-        markedDates={markedDates}
-        onDayPress={handleDateSelect}
-        style={styles.calendar}
-        theme={{
-          selectedDayBackgroundColor: '#097d4c',
-          todayTextColor: '#097d4c',
-          arrowColor: '#097d4c',
-          monthTextColor: '#097d4c',
-        }}
-        enableSwipeMonths
-      />
-
-      {selectedDate && (
-        <ScrollView contentContainerStyle={styles.scheduleContainer}>
-          <Text style={styles.scheduleTitle}>Consultas em {selectedDate}</Text>
-          {loading ? (
+      {/* --- LÓGICA DE EXIBIÇÃO ATUALIZADA --- */}
+      {isLoadingCalendar ? (
+        <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#097d4c" />
-          ) : consultas.length > 0 ? (
-            consultas.map((item, idx) => {
-              const nutri = item.nutricionista;
-              const dadosNutri = nutri && nutricionistasData[nutri.usuarioId];
+            <Text style={styles.loadingText}>Carregando suas consultas...</Text>
+        </View>
+      ) : (
+        <>
+            <Calendar
+                markedDates={markedDates}
+                onDayPress={handleDateSelect}
+                style={styles.calendar}
+                theme={{
+                    selectedDayBackgroundColor: '#097d4c',
+                    todayTextColor: '#097d4c',
+                    arrowColor: '#097d4c',
+                    monthTextColor: '#097d4c',
+                }}
+                enableSwipeMonths
+            />
 
-              return (
-                <View key={idx} style={[styles.timeSlot, styles.occupied]}>
-                  <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
-                  <View>
-                    <Text style={[styles.timeText, { color: '#fff' }]}>Horário: {item.horaConsulta}</Text>
-                    <Text style={styles.nutriName}>Nutricionista: {nutri?.nome || 'Desconhecido'}</Text>
-                    {dadosNutri?.telefone && (
-                      <Text style={styles.nutriName}>Telefone: {dadosNutri.telefone}</Text>
-                    )}
-                    {item.observacoes && (
-                      <Text style={styles.nutriName}>Observações: {item.observacoes}</Text>
-                    )}
-                  </View>
+            {/* Se não houver nenhuma data marcada, exibe a mensagem de estado vazio */}
+            {Object.keys(markedDates).length === 0 && !selectedDate && (
+                <View style={styles.emptyStateContainer}>
+                    <Ionicons name="calendar-outline" size={60} color="#b0b0b0" />
+                    <Text style={styles.emptyStateText}>Nenhuma consulta agendada</Text>
+                    <Text style={styles.emptyStateSubText}>
+                        Quando você agendar uma nova consulta, ela aparecerá marcada aqui.
+                    </Text>
                 </View>
-              );
-            })
-          ) : (
-            <Text style={styles.emptyMessage}>Nenhuma consulta marcada neste dia.</Text>
-          )}
-        </ScrollView>
+            )}
+
+            {/* Se uma data for selecionada, exibe os detalhes */}
+            {selectedDate && (
+                <ScrollView contentContainerStyle={styles.scheduleContainer}>
+                    <Text style={styles.scheduleTitle}>Consultas em {selectedDate}</Text>
+                    {loading ? (
+                        <ActivityIndicator size="large" color="#097d4c" />
+                    ) : consultas.length > 0 ? (
+                        consultas.map((item, idx) => {
+                            const nutri = item.nutricionista;
+                            const dadosNutri = nutri && nutricionistasData[nutri.usuarioId];
+                            return (
+                                <View key={idx} style={[styles.timeSlot, styles.occupied]}>
+                                    <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
+                                    <View>
+                                        <Text style={[styles.timeText, { color: '#fff' }]}>Horário: {item.horaConsulta}</Text>
+                                        <Text style={styles.nutriName}>Nutricionista: {nutri?.nome || 'Desconhecido'}</Text>
+                                        {dadosNutri?.telefone && (
+                                            <Text style={styles.nutriName}>Telefone: {dadosNutri.telefone}</Text>
+                                        )}
+                                        {item.observacoes && (
+                                            <Text style={styles.nutriName}>Observações: {item.observacoes}</Text>
+                                        )}
+                                    </View>
+                                </View>
+                            );
+                        })
+                    ) : (
+                        <Text style={styles.emptyMessage}>Nenhuma consulta marcada para este dia.</Text>
+                    )}
+                </ScrollView>
+            )}
+        </>
       )}
     </View>
   );
