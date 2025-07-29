@@ -1,12 +1,12 @@
-import { View, Text, StyleSheet, Animated, Pressable, Image } from 'react-native';
-import { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Animated, Pressable, Image, Modal } from 'react-native';
+import { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-
-
 export default function DashboardScreen() {
   const router = useRouter();
+  // --- NOVO ESTADO PARA CONTROLAR O MODAL ---
+  const [modalVisible, setModalVisible] = useState(false);
 
   const features = [
     { icon: 'calendar-outline', label: 'Consultas', route: '/ver-consulta' },
@@ -35,10 +35,16 @@ export default function DashboardScreen() {
     ).start();
   }, []);
 
+  const handleSair = () => {
+    setModalVisible(false);
+    router.push('/');
+  };
+
   return (
     <View style={styles.pageContainer}>
       <View style={styles.leftSide}>
-        <Pressable style={styles.backButton} onPress={() => router.push('/')}>
+        {/* --- LÓGICA DO BOTÃO ATUALIZADA --- */}
+        <Pressable style={styles.backButton} onPress={() => setModalVisible(true)}>
           <Ionicons name="arrow-back-outline" size={24} color="#097d4c" />
           <Text style={styles.backText}>Sair / Voltar</Text>
         </Pressable>
@@ -63,6 +69,29 @@ export default function DashboardScreen() {
           />
         ))}
       </View>
+
+      {/* --- NOVO MODAL DE CONFIRMAÇÃO --- */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirmar Saída</Text>
+            <Text style={styles.modalText}>Você tem certeza que deseja sair e voltar para a tela inicial?</Text>
+            <View style={styles.modalButtonContainer}>
+              <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable style={[styles.modalButton, styles.confirmButton]} onPress={handleSair}>
+                <Text style={styles.modalButtonText}>Sair</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -170,5 +199,60 @@ const styles = StyleSheet.create({
     color: '#097d4c',
     fontWeight: '600',
     fontSize: 14,
+  },
+  // --- NOVOS ESTILOS PARA O MODAL ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 320,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#6c757d',
+    marginRight: 10,
+  },
+  confirmButton: {
+    backgroundColor: '#d9534f', // Vermelho para ação de "sair"
+    marginLeft: 10,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
