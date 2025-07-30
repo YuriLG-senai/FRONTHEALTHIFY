@@ -1,192 +1,397 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const options = {
-  headerShown: false,
+// Função para formatar a data
+const formatDate = (isoDate) => {
+    if (!isoDate) return 'N/A';
+    try {
+        const date = new Date(isoDate);
+        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() + userTimezoneOffset).toLocaleDateString('pt-BR');
+    } catch (error) {
+        return 'Data inválida';
+    }
 };
 
-const ProgressoCliente = () => {
-  const router = useRouter();
-  const [pesoAtual, setPesoAtual] = useState('');
-  const [pesoObjetivo, setPesoObjetivo] = useState('');
-  const [mensagem, setMensagem] = useState(null);
-  const [recomendacao, setRecomendacao] = useState(null);
+// --- FUNÇÃO ATUALIZADA ---
+// Função para agrupar as refeições por dia da semana
+const groupPlanByDay = (receitas) => {
+    if (!receitas || receitas.length === 0) return {};
 
-  const calcularProgresso = () => {
-    const pesoNum = parseFloat(pesoAtual);
-    const objetivoNum = parseFloat(pesoObjetivo);
+    // CORREÇÃO: A lista agora corresponde aos dados da API (ex: "Segunda" em vez de "Segunda-feira")
+    const diasOrdenados = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+    
+    const grouped = receitas.reduce((acc, receita) => {
+        const dia = receita.diaSemana;
+        if (!acc[dia]) {
+            acc[dia] = [];
+        }
+        acc[dia].push(receita);
+        return acc;
+    }, {});
 
-    if (isNaN(pesoNum) || isNaN(objetivoNum)) {
-      setMensagem('Por favor, preencha os campos corretamente.');
-      setRecomendacao(null);
-      return;
-    }
+    const orderedGrouped = {};
+    diasOrdenados.forEach(dia => {
+        if (grouped[dia]) {
+            orderedGrouped[dia] = grouped[dia];
+        }
+    });
 
-    const diferenca = Math.abs(pesoNum - objetivoNum);
-    const objetivo = pesoNum > objetivoNum ? 'perder' : 'ganhar';
+    return orderedGrouped;
+};
 
-    setMensagem(
-      `Você precisa ${objetivo} cerca de ${diferenca.toFixed(1)} kg para atingir sua meta. Continue firme! 💪`
-    );
 
-    if (objetivo === 'perder') {
-      setRecomendacao([
-        '🍎 Foque em alimentos naturais e ricos em fibras.',
-        '🥗 Coma vegetais em todas as refeições.',
-        '🚰 Beba bastante água ao longo do dia.',
-        '🔥 Diminua o consumo de açúcar e alimentos processados.',
-        '🏃‍♀️ Combine a dieta com exercícios aeróbicos e musculação leve.'
-      ]);
-    } else {
-      setRecomendacao([
-        '🍗 Aumente o consumo de proteínas (frango, ovos, leguminosas).',
-        '🍚 Inclua carboidratos complexos (arroz integral, batata doce).',
-        '🥜 Adicione gorduras boas (abacate, castanhas, azeite).',
-        '📅 Faça refeições frequentes ao longo do dia.',
-        '🏋️‍♂️ Combine com treinos de força para otimizar o ganho de massa.'
-      ]);
-    }
-  };
+// --- COMPONENTE ATUALIZADO PARA O CARTÃO DE UM ÚNICO PLANO ---
+const PlanoCard = ({ plano }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const receitasDoPlano = plano.planoReceita || [];
+    const planoAgrupado = groupPlanByDay(receitasDoPlano);
+    const diasDaSemana = Object.keys(planoAgrupado);
 
-  return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-        {/* Botão Voltar para Dashboard */}
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.push('/dashboard')}
-        >
-          <Ionicons name="arrow-back" size={24} color="#097d4c" />
-          <Text style={styles.backButtonText}>Voltar para Dashboard</Text>
-        </TouchableOpacity>
+    return (
+        <View style={styles.planoCard}>
+            <View style={styles.planoCardHeader}>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.planoTitle}>{plano.nomePlano}</Text>
+                    <Text style={styles.planoDates}>Válido de: {formatDate(plano.dataInicio)} a {formatDate(plano.dataFim)}</Text>
+                </View>
+                <TouchableOpacity style={styles.detailsButton} onPress={() => setIsExpanded(!isExpanded)}>
+                    <Text style={styles.detailsButtonText}>{isExpanded ? 'Ocultar' : 'Ver Detalhes'}</Text>
+                    <Ionicons name={isExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#fff" />
+                </TouchableOpacity>
+            </View>
 
-        <Text style={styles.titulo}>Acompanhe Seu Progresso</Text>
+            {isExpanded && (
+                <View style={styles.planoDetails}>
+                    {plano.observacoes && (
+                        <View style={styles.obsContainer}>
+                            <Ionicons name="information-circle-outline" size={20} color="#097d4c" />
+                            <Text style={styles.obsText}>{plano.observacoes}</Text>
+                        </View>
+                    )}
+                    {diasDaSemana.map(dia => (
+                        <View key={dia} style={styles.dayCard}>
+                            <Text style={styles.dayTitle}>{dia}</Text>
+                            {planoAgrupado[dia].map((item, index) => (
+                                <View key={index} style={styles.mealCard}>
+                                    <Text style={styles.mealTitle}>{item.refeicao} - {item.receita?.nome || '(Receita não encontrada)'}</Text>
+                                    
+                                    <View style={styles.mealDetailsContainer}>
+                                        <View style={styles.mealDetailItem}>
+                                            <Ionicons name="restaurant-outline" size={16} color="#555" />
+                                            <Text style={styles.mealDetailText}><Text style={styles.mealDetailLabel}>Refeição:</Text> {item.refeicao}</Text>
+                                        </View>
+                                        <View style={styles.mealDetailItem}>
+                                            <Ionicons name="pie-chart-outline" size={16} color="#555" />
+                                            <Text style={styles.mealDetailText}><Text style={styles.mealDetailLabel}>Porção:</Text> {item.quantidadePorcao}</Text>
+                                        </View>
+                                    </View>
 
-        <Text style={styles.label}>Peso Atual (kg)</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={pesoAtual}
-          onChangeText={setPesoAtual}
-          placeholder="Ex: 80"
-        />
-
-        <Text style={styles.label}>Peso Objetivo (kg)</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={pesoObjetivo}
-          onChangeText={setPesoObjetivo}
-          placeholder="Ex: 70"
-        />
-
-        <TouchableOpacity style={styles.botao} onPress={calcularProgresso}>
-          <Text style={styles.textoBotao}>Calcular Progresso</Text>
-        </TouchableOpacity>
-
-        {mensagem && (
-          <View style={styles.resultadoBox}>
-            <Text style={styles.resultadoTexto}>{mensagem}</Text>
-            {recomendacao && (
-              <View style={styles.dicasBox}>
-                <Text style={styles.dicasTitulo}>Recomendações de Dieta:</Text>
-                {recomendacao.map((dica, index) => (
-                  <Text key={index} style={styles.dicaItem}>• {dica}</Text>
-                ))}
-              </View>
+                                    {/* CORREÇÃO: Usa 'instrucoes' em vez de 'descricao' */}
+                                    {item.receita?.instrucoes && (
+                                        <View style={styles.ingredientesContainer}>
+                                            <Text style={styles.ingredientesTitle}>Modo de Preparo:</Text>
+                                            <Text style={styles.mealFood}>{item.receita.instrucoes}</Text>
+                                        </View>
+                                    )}
+                                    
+                                    {item.receita?.ingredientes && (
+                                        <View style={styles.ingredientesContainer}>
+                                            <Text style={styles.ingredientesTitle}>Ingredientes:</Text>
+                                            <Text style={styles.mealFood}>{item.receita.ingredientes}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            ))}
+                        </View>
+                    ))}
+                </View>
             )}
-          </View>
-        )}
-      </View>
-    </ScrollView>
-  );
+        </View>
+    );
+};
+
+export default function PlanoAlimentarCliente() {
+    const router = useRouter();
+    const [planosAlimentares, setPlanosAlimentares] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPlano = async () => {
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) throw new Error("Utilizador não autenticado.");
+
+                const perfilResponse = await fetch('http://localhost:5036/api/Usuarios/perfil', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!perfilResponse.ok) throw new Error("Não foi possível obter o perfil do utilizador.");
+                const perfilData = await perfilResponse.json();
+                const clienteId = perfilData.cliente?.clienteId;
+
+                if (!clienteId) {
+                    setPlanosAlimentares([]);
+                    return;
+                };
+
+                const planosResponse = await fetch('http://localhost:5036/api/PlanosAlimentares');
+                if (!planosResponse.ok) throw new Error("Não foi possível carregar os planos alimentares.");
+                const todosOsPlanos = await planosResponse.json();
+                
+                const planosDoClienteIds = todosOsPlanos
+                    .filter(plano => plano.clienteId === clienteId)
+                    .map(plano => plano.planoId);
+
+                if (planosDoClienteIds.length === 0) {
+                    setPlanosAlimentares([]);
+                    return;
+                }
+
+                const planosDetalhadosPromises = planosDoClienteIds.map(id =>
+                    fetch(`http://localhost:5036/api/PlanosAlimentares/${id}`).then(res => {
+                        if (!res.ok) {
+                            console.warn(`Não foi possível buscar detalhes para o plano ID: ${id}`);
+                            return null;
+                        }
+                        return res.json();
+                    })
+                );
+                
+                const planosDetalhados = await Promise.all(planosDetalhadosPromises);
+                
+                setPlanosAlimentares(planosDetalhados.filter(p => p !== null));
+
+            } catch (error) {
+                console.error("Erro ao carregar plano alimentar:", error);
+                Alert.alert("Erro", "Não foi possível carregar os seus planos alimentares. Tente novamente mais tarde.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPlano();
+    }, []);
+
+    if (loading) {
+        return (
+            <View style={[styles.container, styles.centerContent]}>
+                <ActivityIndicator size="large" color="#097d4c" />
+                <Text style={styles.loadingText}>A carregar os seus planos...</Text>
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView style={styles.container}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.push('/dashboard')}>
+                <Ionicons name="arrow-back" size={24} color="#097d4c" />
+                <Text style={styles.backButtonText}>Voltar ao Dashboard</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.titulo}>Meus Planos Alimentares</Text>
+
+            {planosAlimentares.length > 0 ? (
+                planosAlimentares.map(plano => (
+                    <PlanoCard key={plano.planoId} plano={plano} />
+                ))
+            ) : (
+                <View style={styles.centerContent}>
+                    <Ionicons name="document-text-outline" size={80} color="#b0b0b0" />
+                    <Text style={styles.emptyTitle}>Nenhum Plano Encontrado</Text>
+                    <Text style={styles.emptySubtitle}>Parece que o seu nutricionista ainda não criou um plano alimentar para si.</Text>
+                </View>
+            )}
+        </ScrollView>
+    );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    backgroundColor: '#f6eecf',
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 10,
-  },
-  backButtonText: {
-    color: '#097d4c',
-    fontSize: 16,
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  titulo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-    color: '#333',
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#555',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
-  },
-  botao: {
-    backgroundColor: '#097d4c',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  textoBotao: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  resultadoBox: {
-    marginTop: 20,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#097d4c',
-  },
-  resultadoTexto: {
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 24,
-  },
-  dicasBox: {
-    marginTop: 15,
-  },
-  dicasTitulo: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#097d4c',
-  },
-  dicaItem: {
-    fontSize: 14,
-    color: '#444',
-    marginBottom: 6,
-    lineHeight: 20,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#f6eecf',
+        paddingHorizontal: 20,
+    },
+    centerContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 30,
+    },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingTop: 40,
+        marginBottom: 15,
+    },
+    backButtonText: {
+        color: '#097d4c',
+        fontSize: 16,
+        marginLeft: 8,
+        fontWeight: '500',
+    },
+    titulo: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#333',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    loadingText: {
+        marginTop: 15,
+        fontSize: 16,
+        color: '#555',
+    },
+    emptyTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#555',
+        textAlign: 'center',
+        marginTop: 20,
+    },
+    emptySubtitle: {
+        fontSize: 16,
+        color: '#777',
+        textAlign: 'center',
+        marginTop: 10,
+        lineHeight: 24,
+    },
+    planoCard: {
+        backgroundColor: '#fff',
+        borderRadius: 15,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
+        overflow: 'hidden',
+    },
+    planoCardHeader: {
+        padding: 20,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+    },
+    planoTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#097d4c',
+    },
+    planoDates: {
+        fontSize: 14,
+        color: '#777',
+        fontStyle: 'italic',
+        marginTop: 4,
+    },
+    detailsButton: {
+        backgroundColor: '#097d4c',
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    detailsButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        marginRight: 5,
+    },
+    planoDetails: {
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    obsContainer: {
+        backgroundColor: '#e8f5e9',
+        borderRadius: 10,
+        padding: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    obsText: {
+        flex: 1,
+        marginLeft: 10,
+        color: '#097d4c',
+        fontSize: 15,
+    },
+    dayCard: {
+        marginBottom: 20,
+    },
+    dayTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#097d4c',
+        marginBottom: 10,
+        borderBottomWidth: 2,
+        borderBottomColor: '#097d4c',
+        paddingBottom: 5,
+    },
+    mealCard: {
+        backgroundColor: '#f9f9f9',
+        borderRadius: 12,
+        padding: 15,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#eee'
+    },
+    mealTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 10,
+    },
+    mealDetailsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    mealDetailItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    mealDetailText: {
+        marginLeft: 5,
+        fontSize: 14,
+        color: '#555',
+    },
+    mealDetailLabel: {
+        fontWeight: 'bold',
+    },
+    mealDescription: {
+        fontSize: 15,
+        color: '#666',
+        fontStyle: 'italic',
+        marginBottom: 10,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    ingredientesContainer: {
+        marginTop: 5,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+        paddingTop: 10,
+    },
+    ingredientesTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#444',
+        marginBottom: 5,
+    },
+    mealFood: {
+        fontSize: 15,
+        color: '#555',
+        lineHeight: 22,
+    },
+    mealPortion: {
+        fontSize: 14,
+        color: '#777',
+        fontStyle: 'italic',
+        textAlign: 'right',
+        marginTop: 10,
+    },
 });
-
-export default ProgressoCliente;
