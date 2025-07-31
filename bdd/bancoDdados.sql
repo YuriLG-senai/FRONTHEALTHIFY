@@ -29,15 +29,7 @@ INSERT INTO Perguntas (PerguntaId, Texto) VALUES
 (10, 'Quanto tempo você passa em frente a telas (computador, celular, TV) por dia?'),
 (11, 'Você tem momentos de descanso durante o seu dia? 🌿');
 
-CREATE TABLE IF NOT EXISTS QuestionarioRespostas (
-    QuestionarioRespostaId INT PRIMARY KEY AUTO_INCREMENT,
-    ClienteId INT NOT NULL,
-    PerguntaId INT NOT NULL,
-    RespostaTexto VARCHAR(255) NOT NULL,
-    DataResposta DATETIME NOT NULL,
-    FOREIGN KEY (ClienteId) REFERENCES Clientes(ClienteId),
-    FOREIGN KEY (PerguntaId) REFERENCES Perguntas(PerguntaId)
-);
+
 
 CREATE TABLE Usuarios (
     UsuarioId INT AUTO_INCREMENT PRIMARY KEY,
@@ -111,13 +103,13 @@ CREATE TABLE Receitas (
     Tipo VARCHAR(255) NULL,  
     FotoReceita VARCHAR(255) NULL
 );
-
+DROP TABLE IF EXISTS PlanoReceitas;
 CREATE TABLE PlanoReceitas (
     PlanoId INT,
     ReceitaId INT,
     QuantidadePorcao INT NOT NULL,
-    DiaSemana ENUM('Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo') NOT NULL,
-    Refeicao ENUM('Café','Lanche','Almoço','Jantar','Ceia') NOT NULL,
+    DiaSemana VARCHAR (100) NOT NULL,
+    Refeicao VARCHAR (100) NOT NULL,
     PRIMARY KEY (PlanoId, ReceitaId, DiaSemana, Refeicao),
     FOREIGN KEY (PlanoId) REFERENCES PlanosAlimentares(PlanoId),
     FOREIGN KEY (ReceitaId) REFERENCES Receitas(ReceitaId)
@@ -131,6 +123,25 @@ CREATE TABLE ProgressoCliente (
     IMC DECIMAL(5,2) NULL, 
     Medidas VARCHAR(255) NULL,  
     Observacoes VARCHAR(500) NULL,
+    FOREIGN KEY (ClienteId) REFERENCES Clientes(ClienteId)
+);
+
+CREATE TABLE IF NOT EXISTS QuestionarioRespostas (
+    QuestionarioRespostaId INT PRIMARY KEY AUTO_INCREMENT,
+    ClienteId INT NOT NULL,
+    PerguntaId INT NOT NULL,
+    RespostaTexto VARCHAR(255) NOT NULL,
+    DataResposta DATETIME NOT NULL,
+    FOREIGN KEY (ClienteId) REFERENCES Clientes(ClienteId),
+    FOREIGN KEY (PerguntaId) REFERENCES Perguntas(PerguntaId)
+);
+
+CREATE TABLE IF NOT EXISTS DiarioEntradas (
+    DiarioId INT PRIMARY KEY AUTO_INCREMENT,
+    ClienteId INT NOT NULL,
+    DataEntrada DATE NOT NULL,
+    Refeicoes TEXT,
+    Sintomas TEXT,
     FOREIGN KEY (ClienteId) REFERENCES Clientes(ClienteId)
 );
 
@@ -168,3 +179,5 @@ SELECT * FROM Clientes;
 SELECT * FROM Nutricionistas;
 SELECT * FROM Perguntas;
 SELECT * FROM QuestionarioRespostas;
+SELECT * FRom PlanoReceitas;
+SELECT * FROM DiarioEntradas;

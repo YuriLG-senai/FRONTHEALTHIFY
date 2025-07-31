@@ -1,129 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-    View, 
-    Text, 
-    FlatList, 
-    StyleSheet, 
-    TouchableOpacity, 
-    TextInput, 
-    Modal, 
-    Pressable,
-    ScrollView,
-    Alert 
+    View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, 
+    Alert, Modal, TextInput, Pressable 
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const options = {
-  headerShown: false, 
+// Função para formatar a data
+const formatDate = (isoDate) => {
+    if (!isoDate) return 'Data não especificada';
+    const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+    return new Date(isoDate).toLocaleDateString('pt-BR', options);
 };
 
-// Componente para o Card de Refeição, para deixar o código mais limpo
-const RefeicaoCard = ({ item }) => (
-    <View style={styles.card}>
-        <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{item.nome}</Text>
-            <View style={styles.horarioContainer}>
-                <Ionicons name="time-outline" size={16} color="#097d4c" />
-                <Text style={styles.horario}>{item.horario}</Text>
-            </View>
-        </View>
-        <Text style={styles.alimentos}>{item.alimentos}</Text>
-    </View>
-);
-
-const PlanoAlimentar = () => {
+export default function DiarioCliente() {
     const router = useRouter();
-
-    const [dadosPlano, setDadosPlano] = useState([
-        { id: '1', nome: 'Café da manhã', horario: '08:00', alimentos: 'Ovos, Pão integral, Suco de laranja' },
-        { id: '2', nome: 'Almoço', horario: '12:30', alimentos: 'Frango grelhado, Arroz integral, Salada de folhas' },
-        { id: '3', nome: 'Lanche da tarde', horario: '15:30', alimentos: 'Iogurte com granola' },
-        { id: '4', nome: 'Jantar', horario: '19:00', alimentos: 'Peixe assado, Legumes cozidos' },
-    ]);
-
+    const [entradas, setEntradas] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [clienteId, setClienteId] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
-    const [novaRefeicao, setNovaRefeicao] = useState({
-        nome: '',
-        horario: '',
-        alimentos: '',
-    });
+    
+    // Estados para a nova entrada do diário
+    const [novaRefeicao, setNovaRefeicao] = useState('');
+    const [novoSintoma, setNovoSintoma] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
-    // --- FUNÇÃO PARA VALIDAR O HORÁRIO ---
-    const isHorarioValido = (horario) => {
-        if (!/^\d{2}:\d{2}$/.test(horario)) {
-            return false; // Formato deve ser HH:MM
+    useEffect(() => {
+        const loadInitialData = async () => {
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (!token) throw new Error("Utilizador não autenticado.");
+
+                const perfilResponse = await fetch('http://localhost:5036/api/Usuarios/perfil', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!perfilResponse.ok) throw new Error("Não foi possível obter o perfil.");
+                const perfilData = await perfilResponse.json();
+                
+                if (perfilData.cliente?.clienteId) {
+                    setClienteId(perfilData.cliente.clienteId);
+                    await fetchDiario(perfilData.cliente.clienteId);
+                } else {
+                    throw new Error("Perfil de cliente não encontrado.");
+                }
+            } catch (error) {
+                console.error("Erro inicial:", error);
+                Alert.alert("Erro", "Não foi possível carregar os seus dados.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadInitialData();
+    }, []);
+
+    const fetchDiario = async (cId) => {
+        if (!cId) return;
+        try {
+            const response = await fetch(`http://localhost:5036/api/Diario/cliente/${cId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setEntradas(data);
+            } else {
+                setEntradas([]); // Limpa a lista se não encontrar nada (erro 404)
+            }
+        } catch (error) {
+            console.error("Erro ao buscar diário:", error);
         }
-        const [horas, minutos] = horario.split(':').map(Number);
-        if (horas < 0 || horas > 23) {
-            return false; // Horas devem estar entre 00 e 23
-        }
-        if (minutos < 0 || minutos > 59) {
-            return false; // Minutos devem estar entre 00 e 59
-        }
-        return true;
     };
 
-    const handleAdicionarRefeicao = () => {
-        // Validação dos campos
-        if (!novaRefeicao.nome.trim() || !novaRefeicao.horario.trim() || !novaRefeicao.alimentos.trim()) {
-            Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
+    const handleSalvarEntrada = async () => {
+        if (!novaRefeicao.trim() && !novoSintoma.trim()) {
+            Alert.alert("Atenção", "Preencha pelo menos um dos campos para salvar.");
             return;
         }
+        setIsSaving(true);
+        try {
+            const payload = {
+                clienteId: clienteId,
+                dataEntrada: new Date().toISOString(),
+                refeicoes: novaRefeicao,
+                sintomas: novoSintoma,
+            };
+            const response = await fetch('http://localhost:5036/api/Diario', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
 
-        // Validação específica do horário
-        if (!isHorarioValido(novaRefeicao.horario)) {
-            Alert.alert('Horário Inválido', 'Por favor, insira um horário válido no formato 24h (ex: 08:00 ou 19:30).');
-            return;
+            if (!response.ok) throw new Error("Falha ao salvar a entrada.");
+
+            Alert.alert("Sucesso", "A sua entrada no diário foi salva!");
+            setModalVisible(false);
+            setNovaRefeicao('');
+            setNovoSintoma('');
+            await fetchDiario(clienteId); // Atualiza a lista
+        } catch (error) {
+            console.error("Erro ao salvar entrada:", error);
+            Alert.alert("Erro", "Não foi possível salvar a sua entrada no diário.");
+        } finally {
+            setIsSaving(false);
         }
-
-        setDadosPlano([
-            ...dadosPlano,
-            {
-                id: (dadosPlano.length + 1 + Math.random()).toString(), // ID mais robusto
-                nome: novaRefeicao.nome,
-                horario: novaRefeicao.horario,
-                alimentos: novaRefeicao.alimentos,
-            },
-        ]);
-        setModalVisible(false);
-        setNovaRefeicao({ nome: '', horario: '', alimentos: '' });
     };
 
-    // --- FUNÇÃO PARA FORMATAR O HORÁRIO ENQUANTO O USUÁRIO DIGITA ---
-    const handleHorarioChange = (text) => {
-        // Remove tudo que não for número
-        const numeros = text.replace(/[^0-9]/g, '');
-        let horarioFormatado = numeros;
-
-        if (numeros.length > 2) {
-            // Adiciona o ":" depois das horas
-            horarioFormatado = `${numeros.slice(0, 2)}:${numeros.slice(2)}`;
-        }
-        
-        // Limita o tamanho para 5 caracteres (HH:MM)
-        if (horarioFormatado.length > 5) {
-            horarioFormatado = horarioFormatado.slice(0, 5);
-        }
-
-        setNovaRefeicao({ ...novaRefeicao, horario: horarioFormatado });
-    };
+    if (loading) {
+        return (
+            <View style={[styles.container, styles.centerContent]}>
+                <ActivityIndicator size="large" color="#097d4c" />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <TouchableOpacity style={styles.backButton} onPress={() => router.push('/dashboard')}>
                     <Ionicons name="arrow-back" size={24} color="#097d4c" />
+                    <Text style={styles.backButtonText}>Voltar ao Dashboard</Text>
                 </TouchableOpacity>
-                <Text style={styles.tituloPagina}>Plano Alimentar</Text>
-            </View>
 
-            <FlatList
-                data={dadosPlano}
-                renderItem={({ item }) => <RefeicaoCard item={item} />}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={{ paddingBottom: 100 }} // Espaço para o botão flutuante
-            />
+                <Text style={styles.titulo}>Meu Diário Alimentar</Text>
+                <Text style={styles.subtitulo}>Registe as suas refeições e como se sentiu.</Text>
+
+                {entradas.length > 0 ? (
+                    entradas.map(entrada => (
+                        <View key={entrada.diarioId} style={styles.card}>
+                            <Text style={styles.cardDate}>{formatDate(entrada.dataEntrada)}</Text>
+                            {entrada.refeicoes && (
+                                <View style={styles.cardSection}>
+                                    <Text style={styles.cardTitle}>O que comeu:</Text>
+                                    <Text style={styles.cardText}>{entrada.refeicoes}</Text>
+                                </View>
+                            )}
+                            {entrada.sintomas && (
+                                <View style={styles.cardSection}>
+                                    <Text style={styles.cardTitle}>Como se sentiu:</Text>
+                                    <Text style={styles.cardText}>{entrada.sintomas}</Text>
+                                </View>
+                            )}
+                        </View>
+                    ))
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="book-outline" size={60} color="#b0b0b0" />
+                        <Text style={styles.emptyText}>O seu diário está vazio.</Text>
+                        <Text style={styles.emptySubText}>Clique no botão '+' para adicionar o seu primeiro registo.</Text>
+                    </View>
+                )}
+            </ScrollView>
 
             <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
                 <Ionicons name="add" size={32} color="#fff" />
@@ -137,109 +162,66 @@ const PlanoAlimentar = () => {
             >
                 <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
                     <Pressable style={styles.modalContent} onPress={() => {}}>
-                        <ScrollView>
-                            <Text style={styles.modalTitulo}>Adicionar Refeição</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Nome da Refeição (ex: Café da manhã)"
-                                value={novaRefeicao.nome}
-                                onChangeText={(text) => setNovaRefeicao({ ...novaRefeicao, nome: text })}
-                            />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Horário (HH:MM)"
-                                value={novaRefeicao.horario}
-                                keyboardType="numeric"
-                                onChangeText={handleHorarioChange} // Usa a nova função de formatação
-                                maxLength={5}
-                            />
-                            <TextInput
-                                style={styles.inputMultiLine}
-                                placeholder="Alimentos (ex: Ovos, Pão integral...)"
-                                value={novaRefeicao.alimentos}
-                                onChangeText={(text) => setNovaRefeicao({ ...novaRefeicao, alimentos: text })}
-                                multiline
-                            />
-                            <View style={styles.modalButtonContainer}>
-                                <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
-                                    <Text style={styles.modalButtonText}>Cancelar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handleAdicionarRefeicao}>
-                                    <Text style={styles.modalButtonText}>Salvar</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </ScrollView>
+                        <Text style={styles.modalTitle}>Novo Registo</Text>
+                        <Text style={styles.modalLabel}>O que comeu hoje?</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Ex: Café da manhã: pão com ovo. Almoço: frango com salada..."
+                            multiline
+                            value={novaRefeicao}
+                            onChangeText={setNovaRefeicao}
+                        />
+                        <Text style={styles.modalLabel}>Sentiu algum sintoma?</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Ex: Senti-me com mais energia, tive uma leve dor de cabeça..."
+                            multiline
+                            value={novoSintoma}
+                            onChangeText={setNovoSintoma}
+                        />
+                        <TouchableOpacity style={styles.saveButton} onPress={handleSalvarEntrada} disabled={isSaving}>
+                            {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Salvar</Text>}
+                        </TouchableOpacity>
                     </Pressable>
                 </Pressable>
             </Modal>
         </View>
     );
-};
+}
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f6eecf',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        paddingTop: 40,
-        paddingBottom: 15,
-        backgroundColor: '#f6eecf',
-    },
-    backButton: {
-        padding: 5,
-    },
-    tituloPagina: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#097d4c',
-        marginLeft: 15,
-    },
+    container: { flex: 1, backgroundColor: '#f6eecf' },
+    scrollContent: { padding: 20, paddingBottom: 100 },
+    centerContent: { justifyContent: 'center', alignItems: 'center' },
+    backButton: { flexDirection: 'row', alignItems: 'center', paddingTop: 30, marginBottom: 15 },
+    backButtonText: { color: '#097d4c', fontSize: 16, marginLeft: 8, fontWeight: '500' },
+    titulo: { fontSize: 28, fontWeight: 'bold', color: '#333', textAlign: 'center' },
+    subtitulo: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 30 },
     card: {
         backgroundColor: '#fff',
-        padding: 20,
         borderRadius: 15,
-        marginHorizontal: 15,
-        marginVertical: 8,
+        padding: 20,
+        marginBottom: 15,
         shadowColor: '#000',
         shadowOpacity: 0.1,
         shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
         elevation: 5,
     },
-    cardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    cardTitle: {
-        fontSize: 18,
+    cardDate: {
+        fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
-    },
-    horarioContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#e8f5e9',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    horario: {
-        fontSize: 14,
         color: '#097d4c',
-        marginLeft: 5,
-        fontWeight: '600',
+        marginBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        paddingBottom: 10,
     },
-    alimentos: {
-        fontSize: 15,
-        color: '#666',
-        lineHeight: 22,
-    },
+    cardSection: { marginBottom: 10 },
+    cardTitle: { fontSize: 14, fontWeight: '600', color: '#888', marginBottom: 5, textTransform: 'uppercase' },
+    cardText: { fontSize: 16, color: '#444', lineHeight: 24 },
+    emptyContainer: { alignItems: 'center', marginTop: 50, padding: 20 },
+    emptyText: { fontSize: 20, fontWeight: 'bold', color: '#888', marginTop: 15 },
+    emptySubText: { fontSize: 16, color: '#aaa', textAlign: 'center', marginTop: 5 },
     fab: {
         position: 'absolute',
         bottom: 30,
@@ -256,67 +238,46 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
     },
     modalContent: {
-        backgroundColor: 'white',
-        padding: 25,
-        borderRadius: 20,
         width: '90%',
-        maxHeight: '80%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 25,
     },
-    modalTitulo: {
+    modalTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: 20,
+        color: '#097d4c',
         textAlign: 'center',
-        color: '#333',
+        marginBottom: 20,
+    },
+    modalLabel: {
+        fontSize: 16,
+        color: '#555',
+        marginBottom: 8,
     },
     input: {
-        height: 50,
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 10,
-        marginBottom: 15,
-        paddingHorizontal: 15,
-        fontSize: 16,
-        backgroundColor: '#f9f9f9'
-    },
-    inputMultiLine: {
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 10,
-        marginBottom: 20,
-        paddingHorizontal: 15,
-        paddingTop: 15,
-        fontSize: 16,
         backgroundColor: '#f9f9f9',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 10,
+        padding: 15,
+        fontSize: 16,
         minHeight: 100,
         textAlignVertical: 'top',
-    },
-    modalButtonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    modalButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    cancelButton: {
-        backgroundColor: '#aaa',
-        marginRight: 10,
+        marginBottom: 15,
     },
     saveButton: {
         backgroundColor: '#097d4c',
-        marginLeft: 10,
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
     },
-    modalButtonText: {
+    saveButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
     },
 });
-
-export default PlanoAlimentar;

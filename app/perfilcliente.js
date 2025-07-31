@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, TextInput, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal, TextInput, ActivityIndicator, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,14 +16,41 @@ const formatDateForDisplay = (isoDate) => {
   }
 };
 
-const MenuButton = ({ icon, label, onPress }) => {
+// --- COMPONENTE DO BOTÃO DO MENU ATUALIZADO COM ANIMAÇÃO ---
+function MenuButton({ icon, label, onPress }) {
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const handleHoverIn = () => {
+    Animated.spring(translateY, {
+      toValue: -6,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleHoverOut = () => {
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <Pressable style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]} onPress={onPress}>
-      <Ionicons name={icon} size={22} color="#097d4c" />
-      <Text style={styles.menuButtonText}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      onHoverIn={handleHoverIn}
+      onHoverOut={handleHoverOut}
+      style={{ marginBottom: 16 }}
+    >
+      <Animated.View style={{ transform: [{ translateY }] }}>
+        <View style={styles.card}>
+          <Ionicons name={icon} size={30} color="#097d4c" />
+          <Text style={styles.label}>{label}</Text>
+        </View>
+      </Animated.View>
     </Pressable>
   );
-};
+}
+
 
 export default function PerfilUsuario() {
   const [userData, setUserData] = useState(null);
@@ -76,11 +103,9 @@ export default function PerfilUsuario() {
 
       const data = await response.json();
 
-      console.log('DADOS RECEBIDOS DA API DE PERFIL:', data);
-
       setUserData(data);
       setEditData({
-        id: data.usuarioId || null, // Corrigido para data.UsuarioId conforme o retorno da sua API
+        id: data.usuarioId || null,
         nome: data.nome || '',
         email: data.email || '',
         telefone: data.telefone || '',
@@ -88,8 +113,8 @@ export default function PerfilUsuario() {
         sexo: data.sexo || '',
         endereco: data.endereco || '',
         dataNascimento: data.dataNascimento || '',
-        tipo: data.tipoUsuario || '', // Corrigido para data.tipoUsuario
-        crn: data.Nutricionista?.crn || '', // Acessando dados aninhados
+        tipo: data.tipoUsuario || '',
+        crn: data.Nutricionista?.crn || '',
         especializacao: data.Nutricionista?.especializacao || ''
       });
     } catch (error) {
@@ -101,49 +126,49 @@ export default function PerfilUsuario() {
 
   const handleUpdateProfile = async () => {
     if (!editData.id) {
-        alert('Erro: ID do usuário não encontrado.');
-        return;
+      alert('Erro: ID do usuário não encontrado.');
+      return;
     }
 
     try {
-        const token = await AsyncStorage.getItem('token');
-        if (!token) throw new Error('Token de autenticação não encontrado.');
-        
-        const updatePayload = {
-            nome: editData.nome,
-            email: editData.email,
-            telefone: editData.telefone,
-            endereco: editData.endereco,
-            sexo: editData.sexo,
-            dataNascimento: editData.dataNascimento
-        };
+      const token = await AsyncStorage.getItem('token');
+      if (!token) throw new Error('Token de autenticação não encontrado.');
+      
+      const updatePayload = {
+        nome: editData.nome,
+        email: editData.email,
+        telefone: editData.telefone,
+        endereco: editData.endereco,
+        sexo: editData.sexo,
+        dataNascimento: editData.dataNascimento
+      };
 
-        const response = await fetch(`http://localhost:5036/api/Usuarios/${editData.id}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updatePayload),
-        });
+      const response = await fetch(`http://localhost:5036/api/Usuarios/${editData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatePayload),
+      });
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            try {
-                const parsedError = JSON.parse(errorBody);
-                const errorMessages = Object.values(parsedError.errors).flat().join('\n');
-                throw new Error(`Falha ao atualizar perfil:\n${errorMessages}`);
-            } catch {
-                throw new Error(`Falha ao atualizar perfil: ${errorBody}`);
-            }
+      if (!response.ok) {
+        const errorBody = await response.text();
+        try {
+          const parsedError = JSON.parse(errorBody);
+          const errorMessages = Object.values(parsedError.errors).flat().join('\n');
+          throw new Error(`Falha ao atualizar perfil:\n${errorMessages}`);
+        } catch {
+          throw new Error(`Falha ao atualizar perfil: ${errorBody}`);
         }
+      }
 
-        await fetchUserData(); 
-        setModalVisible(false);
-        alert('Perfil atualizado com sucesso!');
+      await fetchUserData(); 
+      setModalVisible(false);
+      alert('Perfil atualizado com sucesso!');
     } catch (error) {
-        console.error('Erro ao atualizar perfil:', error);
-        alert(error.message);
+      console.error('Erro ao atualizar perfil:', error);
+      alert(error.message);
     }
   };
 
@@ -177,37 +202,30 @@ export default function PerfilUsuario() {
                 <Text style={styles.infoLabel}>Nome:</Text>
                 <Text style={styles.infoValue}>{userData?.nome}</Text>
               </View>
-
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Email:</Text>
                 <Text style={styles.infoValue}>{userData?.email}</Text>
               </View>
-              
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>CPF:</Text>
                 <Text style={styles.infoValue}>{userData?.cpf || 'Não informado'}</Text>
               </View>
-              
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Telefone:</Text>
                 <Text style={styles.infoValue}>{userData?.telefone || 'Não informado'}</Text>
               </View>
-              
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Sexo:</Text>
                 <Text style={styles.infoValue}>{userData?.sexo || 'Não informado'}</Text>
               </View>
-
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Endereço:</Text>
                 <Text style={styles.infoValue}>{userData?.endereco || 'Não informado'}</Text>
               </View>
-
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Nascimento:</Text>
                 <Text style={styles.infoValue}>{formatDateForDisplay(userData?.dataNascimento)}</Text>
               </View>
-
               <Pressable style={styles.editButton} onPress={() => setModalVisible(true)}>
                 <Text style={styles.editButtonText}>Editar Perfil</Text>
               </Pressable>
@@ -216,12 +234,10 @@ export default function PerfilUsuario() {
             {userData?.tipoUsuario === 'Nutricionista' && (
               <View style={styles.profileSection}>
                 <Text style={styles.sectionTitle}>Informações Profissionais</Text>
-
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>CRN:</Text>
                   <Text style={styles.infoValue}>{userData?.Nutricionista?.crn || 'Não informado'}</Text>
                 </View>
-
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Especialização:</Text>
                   <Text style={styles.infoValue}>{userData?.Nutricionista?.especializacao || 'Não informada'}</Text>
@@ -243,68 +259,14 @@ export default function PerfilUsuario() {
           <ScrollView contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Editar Perfil</Text>
-
-              <TextInput
-                style={styles.input}
-                placeholder="Nome"
-                value={editData.nome}
-                onChangeText={(text) => setEditData({ ...editData, nome: text })}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={editData.email}
-                onChangeText={(text) => setEditData({ ...editData, email: text })}
-                keyboardType="email-address"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="CPF"
-                value={editData.cpf}
-                editable={false} // CPF não deve ser editável
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Telefone"
-                value={editData.telefone}
-                onChangeText={(text) => setEditData({ ...editData, telefone: text })}
-                keyboardType="phone-pad"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Sexo"
-                value={editData.sexo}
-                onChangeText={(text) => setEditData({ ...editData, sexo: text })}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Endereço Completo"
-                value={editData.endereco}
-                onChangeText={(text) => setEditData({ ...editData, endereco: text })}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Data de Nascimento (AAAA-MM-DD)"
-                value={editData.dataNascimento ? editData.dataNascimento.split('T')[0] : ''}
-                onChangeText={(text) => setEditData({ ...editData, dataNascimento: text })}
-              />
-              {userData?.tipoUsuario === 'Nutricionista' && (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="CRN"
-                    value={editData.crn}
-                    onChangeText={(text) => setEditData({ ...editData, crn: text })}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Especialização"
-                    value={editData.especializacao}
-                    onChangeText={(text) => setEditData({ ...editData, especializacao: text })}
-                  />
-                </>
-              )}
-
+              <TextInput style={styles.input} placeholder="Nome" value={editData.nome} onChangeText={(text) => setEditData({ ...editData, nome: text })} />
+              <TextInput style={styles.input} placeholder="Email" value={editData.email} onChangeText={(text) => setEditData({ ...editData, email: text })} keyboardType="email-address" />
+              <TextInput style={styles.input} placeholder="CPF" value={editData.cpf} editable={false} />
+              <TextInput style={styles.input} placeholder="Telefone" value={editData.telefone} onChangeText={(text) => setEditData({ ...editData, telefone: text })} keyboardType="phone-pad" />
+              <TextInput style={styles.input} placeholder="Sexo" value={editData.sexo} onChangeText={(text) => setEditData({ ...editData, sexo: text })} />
+              <TextInput style={styles.input} placeholder="Endereço Completo" value={editData.endereco} onChangeText={(text) => setEditData({ ...editData, endereco: text })} />
+              <TextInput style={styles.input} placeholder="Data de Nascimento (AAAA-MM-DD)" value={editData.dataNascimento ? editData.dataNascimento.split('T')[0] : ''} onChangeText={(text) => setEditData({ ...editData, dataNascimento: text })} />
+              
               <View style={styles.modalButtons}>
                 <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
                   <Text style={styles.buttonText}>Cancelar</Text>
@@ -321,7 +283,6 @@ export default function PerfilUsuario() {
   );
 }
 
-
 const styles = StyleSheet.create({
   pageContainer: {
     flex: 1, 
@@ -332,25 +293,28 @@ const styles = StyleSheet.create({
     width: 240,
     backgroundColor: '#f6eecf',
     paddingTop: 40,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
     borderLeftWidth: 1,
     borderLeftColor: '#ddd',
   },
-  menuButton: {
-    flexDirection: 'column',
+  // --- ESTILOS ADICIONADOS PARA O MENU ANIMADO ---
+  card: {
+    backgroundColor: 'transparent',
+    width: 180,
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 22,
-    borderRadius: 10,
-    marginBottom: 18,
-    backgroundColor: 'transparent',
   },
-  menuButtonText: {
-    marginTop: 6,
-    fontSize: 14,
-    color: '#00713c',
-    fontWeight: '500',
+  label: {
+    marginTop: 10,
     textAlign: 'center',
+    color: '#097d4c',
+    fontWeight: '600',
+    fontSize: 14,
   },
   container: {
     flex: 1, 

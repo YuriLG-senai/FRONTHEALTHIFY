@@ -16,20 +16,25 @@ const formatDate = (isoDate) => {
     }
 };
 
-// --- FUNÇÃO ATUALIZADA ---
-// Função para agrupar as refeições por dia da semana
+// --- FUNÇÃO ATUALIZADA PARA LIDAR COM MÚLTIPLOS DIAS ---
 const groupPlanByDay = (receitas) => {
     if (!receitas || receitas.length === 0) return {};
 
-    // CORREÇÃO: A lista agora corresponde aos dados da API (ex: "Segunda" em vez de "Segunda-feira")
     const diasOrdenados = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
     
     const grouped = receitas.reduce((acc, receita) => {
-        const dia = receita.diaSemana;
-        if (!acc[dia]) {
-            acc[dia] = [];
-        }
-        acc[dia].push(receita);
+        // Verifica se diaSemana é uma string e divide-a
+        const dias = typeof receita.diaSemana === 'string' ? receita.diaSemana.split(',') : [];
+        
+        dias.forEach(dia => {
+            const diaLimpo = dia.trim();
+            if (diaLimpo) {
+                if (!acc[diaLimpo]) {
+                    acc[diaLimpo] = [];
+                }
+                acc[diaLimpo].push(receita);
+            }
+        });
         return acc;
     }, {});
 
@@ -47,6 +52,7 @@ const groupPlanByDay = (receitas) => {
 // --- COMPONENTE ATUALIZADO PARA O CARTÃO DE UM ÚNICO PLANO ---
 const PlanoCard = ({ plano }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+
     const receitasDoPlano = plano.planoReceita || [];
     const planoAgrupado = groupPlanByDay(receitasDoPlano);
     const diasDaSemana = Object.keys(planoAgrupado);
@@ -77,11 +83,12 @@ const PlanoCard = ({ plano }) => {
                             <Text style={styles.dayTitle}>{dia}</Text>
                             {planoAgrupado[dia].map((item, index) => (
                                 <View key={index} style={styles.mealCard}>
-                                    <Text style={styles.mealTitle}>{item.refeicao} - {item.receita?.nome || '(Receita não encontrada)'}</Text>
+                                    <Text style={styles.mealTitle}>{item.receita?.nome || '(Receita não encontrada)'}</Text>
                                     
                                     <View style={styles.mealDetailsContainer}>
                                         <View style={styles.mealDetailItem}>
                                             <Ionicons name="restaurant-outline" size={16} color="#555" />
+                                            {/* Exibe todas as refeições selecionadas */}
                                             <Text style={styles.mealDetailText}><Text style={styles.mealDetailLabel}>Refeição:</Text> {item.refeicao}</Text>
                                         </View>
                                         <View style={styles.mealDetailItem}>
@@ -90,7 +97,6 @@ const PlanoCard = ({ plano }) => {
                                         </View>
                                     </View>
 
-                                    {/* CORREÇÃO: Usa 'instrucoes' em vez de 'descricao' */}
                                     {item.receita?.instrucoes && (
                                         <View style={styles.ingredientesContainer}>
                                             <Text style={styles.ingredientesTitle}>Modo de Preparo:</Text>
@@ -134,6 +140,7 @@ export default function PlanoAlimentarCliente() {
 
                 if (!clienteId) {
                     setPlanosAlimentares([]);
+                    setLoading(false);
                     return;
                 };
 
@@ -147,6 +154,7 @@ export default function PlanoAlimentarCliente() {
 
                 if (planosDoClienteIds.length === 0) {
                     setPlanosAlimentares([]);
+                    setLoading(false);
                     return;
                 }
 
@@ -348,15 +356,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 10,
+        flexWrap: 'wrap', // Permite que os itens quebrem a linha se não couberem
     },
     mealDetailItem: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 5, // Espaçamento entre os itens
     },
     mealDetailText: {
         marginLeft: 5,
         fontSize: 14,
         color: '#555',
+        flexShrink: 1, // Permite que o texto quebre a linha se for muito longo
     },
     mealDetailLabel: {
         fontWeight: 'bold',

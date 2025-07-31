@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, TextInput, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal, TextInput, ActivityIndicator, ScrollView, Alert, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,15 +24,41 @@ const generateRandomCRN = () => {
     return `CRN-${region} / ${number}`;
 };
 
-// Componente do Botão do Menu
-const MenuButton = ({ icon, label, onPress }) => {
+// --- COMPONENTE DO BOTÃO DO MENU ATUALIZADO COM ANIMAÇÃO ---
+function MenuButton({ icon, label, onPress }) {
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const handleHoverIn = () => {
+    Animated.spring(translateY, {
+      toValue: -6,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleHoverOut = () => {
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <Pressable style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]} onPress={onPress}>
-      <Ionicons name={icon} size={22} color="#097d4c" />
-      <Text style={styles.menuButtonText}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      onHoverIn={handleHoverIn}
+      onHoverOut={handleHoverOut}
+      style={{ marginBottom: 16 }}
+    >
+      <Animated.View style={{ transform: [{ translateY }] }}>
+        <View style={styles.card}>
+          <Ionicons name={icon} size={30} color="#097d4c" />
+          <Text style={styles.label}>{label}</Text>
+        </View>
+      </Animated.View>
     </Pressable>
   );
-};
+}
+
 
 // Componente principal da página de Perfil do Nutricionista
 export default function PerfilNutricionista() {
@@ -42,7 +68,7 @@ export default function PerfilNutricionista() {
   
   const [editData, setEditData] = useState({
     usuarioId: null,
-    nutricionistaId: null,
+    NutricionistaId: null,
     nome: '',
     email: '',
     telefone: '',
@@ -81,13 +107,15 @@ export default function PerfilNutricionista() {
 
       if (!response.ok) throw new Error('Erro na resposta do servidor');
       const data = await response.json();
+      
+      console.log("Dados brutos recebidos da API /perfil:", data);
 
       let crnValue = data.nutricionista?.crn;
       if (!crnValue) {
         crnValue = generateRandomCRN();
       }
 
-      const especialidadeValue = data.nutricionista?.Especialidade || data.nutricionista?.especialidade || '';
+      const especialidadeValue = data.nutricionista?.especialidade || '';
 
       const updatedUserData = {
         ...data,
@@ -99,9 +127,13 @@ export default function PerfilNutricionista() {
       };
       setUserData(updatedUserData);
 
+      if (!data.nutricionista?.NutricionistaId) {
+          console.error("ALERTA: O 'nutricionistaId' não foi encontrado na resposta da API. Verifique o backend.");
+      }
+
       setEditData({
         usuarioId: data.usuarioId || null,
-        nutricionistaId: data.nutricionista?.nutricionistaId || null,
+        nutricionistaId: data.nutricionista?.NutricionistaId || null,
         nome: data.nome || '',
         email: data.email || '',
         telefone: data.telefone || '',
@@ -121,18 +153,15 @@ export default function PerfilNutricionista() {
     }
   };
 
-  // --- FUNÇÃO ATUALIZADA COM DEBUG MAIS DETALHADO ---
   const handleUpdateProfile = async () => {
     console.log("1. A iniciar handleUpdateProfile...");
-    // Log para ver o estado exato dos dados antes de qualquer ação
     console.log("Dados atuais no estado de edição (editData):", editData);
 
-    // Validações separadas para um feedback mais claro
     if (!editData.usuarioId) {
       Alert.alert('Erro Crítico', 'O ID do Usuário não foi encontrado. Não é possível salvar.');
       return;
     }
-    if (!editData.nutricionistaId) {
+    if (!editData.NutricionistaId) {
       Alert.alert('Erro Crítico', 'O ID do Nutricionista não foi encontrado. Verifique se os dados do perfil foram carregados corretamente.');
       return;
     }
@@ -156,7 +185,7 @@ export default function PerfilNutricionista() {
         Especialidade: editData.especializacao,
         descricao: editData.descricao,
         usuarioId: editData.usuarioId,
-        nutricionistaId: editData.nutricionistaId,
+        NutricionistaId: editData.NutricionistaId,
       };
       console.log("3. Payloads criados:", { usuarioPayload, nutricionistaPayload });
 
@@ -175,7 +204,7 @@ export default function PerfilNutricionista() {
       console.log("6. Dados pessoais atualizados com sucesso.");
 
       console.log("7. A enviar requisição para atualizar dados do NUTRICIONISTA...");
-      const nutriResponse = await fetch(`http://localhost:5036/api/Nutricionistas/${editData.nutricionistaId}`, {
+      const nutriResponse = await fetch(`http://localhost:5036/api/Nutricionistas/${editData.NutricionistaId}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(nutricionistaPayload),
@@ -291,20 +320,28 @@ const styles = StyleSheet.create({
         width: 240,
         backgroundColor: '#f6eecf',
         paddingTop: 40,
-        paddingHorizontal: 12,
+        paddingHorizontal: 10,
+        alignItems: 'center',
+        justifyContent: 'flex-start',
         borderLeftWidth: 1,
         borderLeftColor: '#ddd',
     },
-    menuButton: {
-        flexDirection: 'row',
+    // --- ESTILOS DO MENU ATUALIZADOS ---
+    card: {
+        backgroundColor: 'transparent',
+        width: 180,
+        paddingVertical: 20,
+        paddingHorizontal: 10,
+        borderRadius: 16,
         alignItems: 'center',
-        paddingVertical: 15,
+        justifyContent: 'center',
     },
-    menuButtonText: {
-        marginLeft: 10,
-        fontSize: 16,
-        color: '#00713c',
-        fontWeight: '500',
+    label: {
+        marginTop: 10,
+        textAlign: 'center',
+        color: '#097d4c',
+        fontWeight: '600',
+        fontSize: 14,
     },
     container: {
         flex: 1, 

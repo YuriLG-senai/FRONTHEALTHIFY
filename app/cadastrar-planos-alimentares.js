@@ -24,15 +24,12 @@ function MenuButton({ icon, label, onPress }) {
   );
 }
 
-// --- NOVO COMPONENTE PARA OS BOTÕES DE SELEÇÃO MÚLTIPLA ---
 const MultiSelectButtons = ({ options, selectedOptions, onSelectionChange }) => {
     const toggleSelection = (option) => {
         const isSelected = selectedOptions.includes(option);
         if (isSelected) {
-            // Remove a opção se já estiver selecionada
             onSelectionChange(selectedOptions.filter(item => item !== option));
         } else {
-            // Adiciona a opção se não estiver selecionada
             onSelectionChange([...selectedOptions, option]);
         }
     };
@@ -92,8 +89,12 @@ export default function CriarPlanoAlimentar() {
   }, []);
 
   const adicionarReceita = () => {
-    // Agora diaSemana e refeicao são arrays vazios
-    setReceitas([...receitas, { receitaId: '', quantidadePorcao: '', diaSemana: [], refeicao: [] }]);
+    setReceitas([...receitas, { 
+        receitaId: '', 
+        quantidadePorcao: '', 
+        diaSemana: [], 
+        refeicao: [] 
+    }]);
   };
 
   const removerReceita = (index) => {
@@ -125,6 +126,27 @@ export default function CriarPlanoAlimentar() {
     }
   };
 
+  // --- NOVA FUNÇÃO PARA FORMATAR A DATA ENQUANTO O UTILIZADOR DIGITA ---
+  const formatDateInput = (text) => {
+    const numeros = text.replace(/[^0-9]/g, '');
+    let dataFormatada = numeros;
+    if (numeros.length > 2) {
+      dataFormatada = `${numeros.slice(0, 2)}-${numeros.slice(2)}`;
+    }
+    if (numeros.length > 4) {
+      dataFormatada = `${numeros.slice(0, 2)}-${numeros.slice(2, 4)}-${numeros.slice(4, 8)}`;
+    }
+    return dataFormatada;
+  };
+
+  const handleDataInicioChange = (text) => {
+    setDataInicio(formatDateInput(text));
+  };
+
+  const handleDataFimChange = (text) => {
+    setDataFim(formatDateInput(text));
+  };
+
   const salvarPlano = async () => {
     if (!clienteCpf || !nutricionistaCpf || !nomePlano || !dataInicio || !dataFim) {
       Alert.alert('Campos Obrigatórios', 'Por favor, preencha todos os dados principais do plano.');
@@ -147,19 +169,25 @@ export default function CriarPlanoAlimentar() {
       return;
     }
 
+    // --- CONVERTE A DATA PARA O FORMATO DA API ANTES DE ENVIAR ---
+    const [diaInicio, mesInicio, anoInicio] = dataInicio.split('-');
+    const dataInicioFormatada = `${anoInicio}-${mesInicio}-${diaInicio}`;
+
+    const [diaFim, mesFim, anoFim] = dataFim.split('-');
+    const dataFimFormatada = `${anoFim}-${mesFim}-${diaFim}`;
+
     const payload = {
       clienteId,
       nutricionistaId,
       nomePlano,
-      dataInicio,
-      dataFim,
+      dataInicio: dataInicioFormatada,
+      dataFim: dataFimFormatada,
       observacoes,
-      // Envia os arrays diretamente. O backend precisará de ser ajustado para aceitar um array de strings.
       receitas: receitas.map(r => ({
         receitaId: parseInt(r.receitaId),
         quantidadePorcao: parseInt(r.quantidadePorcao),
-        diaSemana: r.diaSemana.join(','), // Converte o array para uma string separada por vírgulas
-        refeicao: r.refeicao.join(','),   // Converte o array para uma string separada por vírgulas
+        diaSemana: r.diaSemana.join(','),
+        refeicao: r.refeicao.join(','),
       })),
     };
 
@@ -218,8 +246,11 @@ export default function CriarPlanoAlimentar() {
           <TextInput style={styles.input} placeholder="CPF do Cliente (apenas números)" keyboardType="numeric" value={clienteCpf} onChangeText={setClienteCpf} maxLength={11} />
           <TextInput style={styles.input} placeholder="CPF do Nutricionista (apenas números)" keyboardType="numeric" value={nutricionistaCpf} onChangeText={setNutricionistaCpf} maxLength={11} />
           <TextInput style={styles.input} placeholder="Nome do Plano (ex: Plano de Definição)" value={nomePlano} onChangeText={setNomePlano} />
-          <TextInput style={styles.input} placeholder="Data de Início (AAAA-MM-DD)" value={dataInicio} onChangeText={setDataInicio} />
-          <TextInput style={styles.input} placeholder="Data de Fim (AAAA-MM-DD)" value={dataFim} onChangeText={setDataFim} />
+          
+          {/* --- INPUTS DE DATA ATUALIZADOS --- */}
+          <TextInput style={styles.input} placeholder="Data de Início (DD-MM-AAAA)" keyboardType="numeric" value={dataInicio} onChangeText={handleDataInicioChange} maxLength={10} />
+          <TextInput style={styles.input} placeholder="Data de Fim (DD-MM-AAAA)" keyboardType="numeric" value={dataFim} onChangeText={handleDataFimChange} maxLength={10} />
+          
           <TextInput style={[styles.input, { height: 100, textAlignVertical: 'top' }]} placeholder="Observações..." multiline value={observacoes} onChangeText={setObservacoes} />
 
           <Text style={styles.sectionTitle}>Receitas do Plano</Text>
@@ -434,7 +465,6 @@ const styles = StyleSheet.create({
     color: '#097d4c',
     fontWeight: '600',
   },
-  // --- NOVOS ESTILOS PARA SELEÇÃO MÚLTIPLA ---
   multiSelectContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -460,7 +490,6 @@ const styles = StyleSheet.create({
   multiSelectButtonTextSelected: {
     color: '#fff',
   },
-  // --- Estilos para o Modal de Sucesso (sem alterações) ---
   successModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
