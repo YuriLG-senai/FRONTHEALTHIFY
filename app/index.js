@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Image, ImageBackground
@@ -8,13 +8,6 @@ import Checkbox from 'expo-checkbox';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwtDecode from 'jwt-decode';
-
-
-
-
-
-
-
 
 export default function IndexScreen() {
   const [email, setEmail] = useState('');
@@ -29,6 +22,8 @@ export default function IndexScreen() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isNutricionista, setIsNutricionista] = useState(false);
 
+  const [passwordError, setPasswordError] = useState('');
+
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [objetivo, setObjetivo] = useState('');
@@ -41,15 +36,36 @@ export default function IndexScreen() {
 
   const router = useRouter();
 
+  useEffect(() => {
+    if (isRegistering && confirmPassword && password !== confirmPassword) {
+      setPasswordError('As senhas não coincidem.');
+    } else {
+      setPasswordError('');
+    }
+  }, [password, confirmPassword, isRegistering]);
+
+
   const validateEmail = (email) => {
     return email.includes('@') && email.includes('.');
   };
 
   const formatDateToISO = (inputDate) => {
-    if (!inputDate) return '';
+    if (!inputDate || inputDate.length !== 10) return '';
     const [day, month, year] = inputDate.split('-');
     if (!day || !month || !year) return '';
     return `${year}-${month}-${day}`;
+  };
+
+  const handleDateChange = (text) => {
+    const numeros = text.replace(/[^0-9]/g, '');
+    let dataFormatada = numeros;
+    if (numeros.length > 2) {
+      dataFormatada = `${numeros.slice(0, 2)}-${numeros.slice(2)}`;
+    }
+    if (numeros.length > 4) {
+      dataFormatada = `${numeros.slice(0, 2)}-${numeros.slice(2, 4)}-${numeros.slice(4, 8)}`;
+    }
+    setDataNascimento(dataFormatada);
   };
 
   const handleRegister = async () => {
@@ -90,7 +106,15 @@ export default function IndexScreen() {
       if (!usuarioResponse.ok) {
         const errorText = await usuarioResponse.text();
         console.error('Erro da API:', errorText);
-        alert('Erro ao cadastrar usuário: ' + usuarioResponse.status);
+
+        // --- LÓGICA ATUALIZADA PARA ALERTAS INTELIGENTES ---
+        if (errorText.includes('Duplicate entry') && errorText.includes("for key 'Email'")) {
+            alert(`Erro no Cadastro: O email "${email}" já está em uso.`);
+        } else if (errorText.includes('Duplicate entry') && errorText.includes("for key 'cpf'")) { // Assumindo que a chave do CPF se chama 'cpf'
+            alert(`Erro no Cadastro: O CPF "${cpf}" já está registado.`);
+        } else {
+            alert('Erro ao cadastrar usuário. Verifique os dados e tente novamente.');
+        }
         return;
       }
 
@@ -124,14 +148,12 @@ export default function IndexScreen() {
       if (!complementoResponse.ok) {
         const errorText = await complementoResponse.text();
         console.error('Erro ao cadastrar dados adicionais:', errorText);
-
-
+        // Esta verificação pode ser removida se o backend for corrigido para não exigir 'Usuario'
         if (errorText.toLowerCase().includes('usuario field is required')) {
           alert('Cadastro realizado com sucesso!');
           resetForm();
           return;
         }
-
         alert('Erro ao cadastrar dados adicionais: ' + complementoResponse.status);
         return;
       }
@@ -185,12 +207,7 @@ export default function IndexScreen() {
       const data = await response.json();
   
       const token = data.token;
-
       const decoded = jwtDecode(token);
-
-
-
-      console.log('Dados decodificados do token:', decoded);
       
       const usuarioId = decoded.UsuarioId || decoded.usuarioId;
       const tipoUsuario = decoded.TipoUsuario || decoded.tipoUsuario;
@@ -230,6 +247,7 @@ export default function IndexScreen() {
         {isRegistering && (
           <>
             <TextInput style={styles.input} placeholder="Confirmar Senha" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
             <View style={styles.rowContainer}>
               <TextInput style={styles.halfInput} placeholder="Nome" value={nome} onChangeText={setNome} />
@@ -246,8 +264,9 @@ export default function IndexScreen() {
                 style={styles.halfInput}
                 placeholder="Data de Nascimento (DD-MM-YYYY)"
                 value={dataNascimento}
-                onChangeText={setDataNascimento}
+                onChangeText={handleDateChange}
                 keyboardType="numeric"
+                maxLength={10}
               />
               <View style={[styles.halfInput, { paddingHorizontal: 0, paddingVertical: 0 }]}>
                 <Picker
@@ -274,9 +293,7 @@ export default function IndexScreen() {
                   <TextInput style={styles.halfInput} placeholder="Peso (kg)" value={peso} onChangeText={setPeso} keyboardType="numeric" />
                   <TextInput style={styles.halfInput} placeholder="Altura (cm)" value={altura} onChangeText={setAltura} keyboardType="numeric" />
                 </View>
-
                 <TextInput style={styles.input} placeholder="Objetivo" value={objetivo} onChangeText={setObjetivo} />
-
                 <View style={styles.input}>
                   <Picker
                     selectedValue={nivelAtividade}
@@ -290,7 +307,6 @@ export default function IndexScreen() {
                     <Picker.Item label="Muito ativo" value="Muito ativo" />
                   </Picker>
                 </View>
-
                 <TextInput style={styles.input} placeholder="Preferências Alimentares" value={preferenciasAlimentares} onChangeText={setPreferenciasAlimentares} />
                 <TextInput style={styles.input} placeholder="Doenças Preexistentes" value={doencasPreexistentes} onChangeText={setDoencasPreexistentes} />
               </>
@@ -416,5 +432,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     textDecorationLine: 'underline',
+  },
+  errorText: {
+    color: '#D8000C',
+    fontSize: 14,
+    marginBottom: 10,
+    marginLeft: 5,
+    fontWeight: '500'
   },
 });

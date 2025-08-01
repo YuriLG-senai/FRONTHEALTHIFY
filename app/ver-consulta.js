@@ -29,9 +29,8 @@ export default function VerConsulta() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   
-  // --- ESTADOS ATUALIZADOS ---
   const [clienteCpf, setClienteCpf] = useState('');
-  const [nutricionistaCpf, setNutricionistaCpf] = useState(''); // Novo estado para o CPF do nutri
+  const [nutricionistaCpf, setNutricionistaCpf] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newConsulta, setNewConsulta] = useState({
@@ -113,6 +112,16 @@ export default function VerConsulta() {
       return;
     }
 
+    const horarioJaMarcado = consultas.find(c => {
+        const dataConsultaExistente = c.dataConsulta.split('T')[0];
+        return dataConsultaExistente === newConsulta.DataConsulta && c.horaConsulta === newConsulta.HoraConsulta;
+    });
+
+    if (horarioJaMarcado) {
+        Alert.alert('Horário Ocupado', 'Já existe uma consulta marcada para esta data e horário. Por favor, escolha outro horário.');
+        return;
+    }
+
     setIsSubmitting(true);
 
     const clienteIdEncontrado = await findIdByCpf(clienteCpf, 'Clientes');
@@ -129,10 +138,14 @@ export default function VerConsulta() {
       return;
     }
 
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Cria uma string de data e hora no formato ISO 8601 completo antes de criar o objeto Date.
+    const dataISO = `${newConsulta.DataConsulta}T${newConsulta.HoraConsulta}:00`;
+
     const payload = {
       clienteId: clienteIdEncontrado,
       nutricionistaId: nutricionistaIdEncontrado,
-      dataConsulta: new Date(`${newConsulta.DataConsulta}T${newConsulta.HoraConsulta}:00`).toISOString(),
+      dataConsulta: new Date(dataISO).toISOString(),
       horaConsulta: newConsulta.HoraConsulta,
       tipoConsulta: newConsulta.TipoConsulta,
       status: newConsulta.Status,
@@ -294,9 +307,11 @@ export default function VerConsulta() {
               keyExtractor={(item) => item.consultaId.toString()}
               renderItem={({ item }) => (
                 <View style={styles.consultaItem}>
-                  <Text style={styles.modalText}>Cliente: {item.cliente?.usuario?.nome || 'Não informado'}</Text>
-                  <Text style={styles.modalText}>Horário: {item.horaConsulta}</Text>
-                  <Text style={styles.modalText}>Status: {item.status}</Text>
+                  <Text style={styles.modalText}><Text style={styles.bold}>Cliente:</Text> {item.cliente?.usuario?.nome || 'Não informado'}</Text>
+                  <Text style={styles.modalText}><Text style={styles.bold}>Telefone:</Text> {item.cliente?.usuario?.telefone || 'Não informado'}</Text>
+                  <Text style={styles.modalText}><Text style={styles.bold}>Horário:</Text> {item.horaConsulta}</Text>
+                  <Text style={styles.modalText}><Text style={styles.bold}>Status:</Text> {item.status}</Text>
+                  {item.observacoes && <Text style={styles.modalText}><Text style={styles.bold}>Observações:</Text> {item.observacoes}</Text>}
                 </View>
               )}
               ListEmptyComponent={<Text style={styles.modalText}>Nenhuma consulta agendada para este dia.</Text>}
@@ -451,4 +466,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 5,
   },
+  bold: {
+      fontWeight: 'bold',
+  }
 });

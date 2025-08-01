@@ -65,9 +65,6 @@ export default function PerfilUsuario() {
     sexo: '',
     endereco: '',
     dataNascimento: '',
-    tipo: '',
-    crn: '',
-    especializacao: ''
   });
 
   const router = useRouter();
@@ -113,9 +110,6 @@ export default function PerfilUsuario() {
         sexo: data.sexo || '',
         endereco: data.endereco || '',
         dataNascimento: data.dataNascimento || '',
-        tipo: data.tipoUsuario || '',
-        crn: data.Nutricionista?.crn || '',
-        especializacao: data.Nutricionista?.especializacao || ''
       });
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
@@ -230,20 +224,6 @@ export default function PerfilUsuario() {
                 <Text style={styles.editButtonText}>Editar Perfil</Text>
               </Pressable>
             </View>
-
-            {userData?.tipoUsuario === 'Nutricionista' && (
-              <View style={styles.profileSection}>
-                <Text style={styles.sectionTitle}>Informações Profissionais</Text>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>CRN:</Text>
-                  <Text style={styles.infoValue}>{userData?.Nutricionista?.crn || 'Não informado'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Especialização:</Text>
-                  <Text style={styles.infoValue}>{userData?.Nutricionista?.especializacao || 'Não informada'}</Text>
-                </View>
-              </View>
-            )}
           </ScrollView>
         )}
       </View>
@@ -261,7 +241,7 @@ export default function PerfilUsuario() {
               <Text style={styles.modalTitle}>Editar Perfil</Text>
               <TextInput style={styles.input} placeholder="Nome" value={editData.nome} onChangeText={(text) => setEditData({ ...editData, nome: text })} />
               <TextInput style={styles.input} placeholder="Email" value={editData.email} onChangeText={(text) => setEditData({ ...editData, email: text })} keyboardType="email-address" />
-              <TextInput style={styles.input} placeholder="CPF" value={editData.cpf} editable={false} />
+              {/* --- CAMPO DE CPF REMOVIDO DAQUI --- */}
               <TextInput style={styles.input} placeholder="Telefone" value={editData.telefone} onChangeText={(text) => setEditData({ ...editData, telefone: text })} keyboardType="phone-pad" />
               <TextInput style={styles.input} placeholder="Sexo" value={editData.sexo} onChangeText={(text) => setEditData({ ...editData, sexo: text })} />
               <TextInput style={styles.input} placeholder="Endereço Completo" value={editData.endereco} onChangeText={(text) => setEditData({ ...editData, endereco: text })} />

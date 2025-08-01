@@ -68,7 +68,7 @@ export default function PerfilNutricionista() {
   
   const [editData, setEditData] = useState({
     usuarioId: null,
-    NutricionistaId: null,
+    nutricionistaId: null,
     nome: '',
     email: '',
     telefone: '',
@@ -127,13 +127,13 @@ export default function PerfilNutricionista() {
       };
       setUserData(updatedUserData);
 
-      if (!data.nutricionista?.NutricionistaId) {
+      if (!data.nutricionista?.nutricionistaId) {
           console.error("ALERTA: O 'nutricionistaId' não foi encontrado na resposta da API. Verifique o backend.");
       }
 
       setEditData({
         usuarioId: data.usuarioId || null,
-        nutricionistaId: data.nutricionista?.NutricionistaId || null,
+        nutricionistaId: data.nutricionista?.nutricionistaId || null,
         nome: data.nome || '',
         email: data.email || '',
         telefone: data.telefone || '',
@@ -161,7 +161,7 @@ export default function PerfilNutricionista() {
       Alert.alert('Erro Crítico', 'O ID do Usuário não foi encontrado. Não é possível salvar.');
       return;
     }
-    if (!editData.NutricionistaId) {
+    if (!editData.nutricionistaId) {
       Alert.alert('Erro Crítico', 'O ID do Nutricionista não foi encontrado. Verifique se os dados do perfil foram carregados corretamente.');
       return;
     }
@@ -185,7 +185,7 @@ export default function PerfilNutricionista() {
         Especialidade: editData.especializacao,
         descricao: editData.descricao,
         usuarioId: editData.usuarioId,
-        NutricionistaId: editData.NutricionistaId,
+        nutricionistaId: editData.nutricionistaId,
       };
       console.log("3. Payloads criados:", { usuarioPayload, nutricionistaPayload });
 
@@ -204,7 +204,7 @@ export default function PerfilNutricionista() {
       console.log("6. Dados pessoais atualizados com sucesso.");
 
       console.log("7. A enviar requisição para atualizar dados do NUTRICIONISTA...");
-      const nutriResponse = await fetch(`http://localhost:5036/api/Nutricionistas/${editData.NutricionistaId}`, {
+      const nutriResponse = await fetch(`http://localhost:5036/api/Nutricionistas/${editData.nutricionistaId}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(nutricionistaPayload),

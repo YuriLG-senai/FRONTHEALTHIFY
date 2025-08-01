@@ -13,11 +13,7 @@ export default function ConsultarDisponibilidade() {
   const [loading, setLoading] = useState(false);
   const [nutricionistasData, setNutricionistasData] = useState({});
   const [clienteIdLogado, setClienteIdLogado] = useState(null);
-
-  // --- NOVO ESTADO ADICIONADO ---
-  // Controla o carregamento inicial das marcações do calendário
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(true);
-
 
   const fetchUsuarioLogado = async () => {
     try {
@@ -70,7 +66,7 @@ export default function ConsultarDisponibilidade() {
         datasMarcadas[data] = {
           marked: true,
           dotColor: '#cc3b3b',
-          selected: selectedDate === data, // Mantém a seleção se for o dia clicado
+          selected: selectedDate === data,
         };
       });
 
@@ -80,25 +76,25 @@ export default function ConsultarDisponibilidade() {
     }
   };
 
+  // Esta função pode ser simplificada ou removida se o GET principal já traz o telefone
   const fetchDadosNutricionista = async (nutri) => {
-    if (!nutri?.usuarioId) return null;
-    if (nutricionistasData[nutri.usuarioId]) {
-      return nutricionistasData[nutri.usuarioId];
+    if (!nutri?.usuario?.telefone) { // Verifica se o telefone já veio na consulta
+        if (nutricionistasData[nutri.nutricionistaId]) {
+            return nutricionistasData[nutri.nutricionistaId];
+        }
+        // Se não veio, busca separadamente (lógica de fallback)
+        try {
+            const res = await fetch(`http://localhost:5036/api/Usuarios/${nutri.usuarioId}`);
+            if (!res.ok) return nutri;
+            const usuario = await res.json();
+            const dadosCompletos = { ...nutri, usuario: {...nutri.usuario, telefone: usuario.telefone } };
+            setNutricionistasData(prev => ({...prev, [nutri.nutricionistaId]: dadosCompletos }));
+            return dadosCompletos;
+        } catch (e) {
+            return nutri;
+        }
     }
-    try {
-      const res = await fetch(`http://localhost:5036/api/Usuarios/${nutri.usuarioId}`);
-      if (!res.ok) throw new Error('Erro ao buscar usuário');
-      const usuario = await res.json();
-      const dadosComTelefone = { ...nutri, telefone: usuario.telefone || null };
-      setNutricionistasData(prev => ({
-        ...prev,
-        [nutri.usuarioId]: dadosComTelefone,
-      }));
-      return dadosComTelefone;
-    } catch (e) {
-      console.error('Erro ao buscar dados do nutricionista:', e);
-      return null;
-    }
+    return nutri;
   };
 
   const fetchConsultasPorData = async (data) => {
@@ -115,16 +111,19 @@ export default function ConsultarDisponibilidade() {
           String(consulta.clienteId) === String(clienteIdLogado)
         );
       });
-
-      await Promise.all(
+      
+      // Processa os dados para garantir que o estado local (nutricionistasData) seja preenchido
+      const consultasProcessadas = await Promise.all(
         consultasFiltradas.map(async (consulta) => {
           if (consulta.nutricionista) {
-            await fetchDadosNutricionista(consulta.nutricionista);
+            const nutriCompleto = await fetchDadosNutricionista(consulta.nutricionista);
+            return { ...consulta, nutricionista: nutriCompleto };
           }
+          return consulta;
         })
       );
 
-      setConsultas(consultasFiltradas);
+      setConsultas(consultasProcessadas);
     } catch (e) {
       console.error('Erro ao buscar consultas:', e);
       setConsultas([]);
@@ -137,14 +136,11 @@ export default function ConsultarDisponibilidade() {
     const selected = day.dateString;
     setSelectedDate(selected);
     
-    // Atualiza as marcações para destacar o dia selecionado
     setMarkedDates(prev => {
         const newMarked = {...prev};
-        // Remove a seleção antiga
         Object.keys(newMarked).forEach(date => {
             newMarked[date].selected = false;
         });
-        // Adiciona a nova seleção
         newMarked[selected] = {
             ...newMarked[selected],
             selected: true,
@@ -160,13 +156,12 @@ export default function ConsultarDisponibilidade() {
     fetchUsuarioLogado();
   }, []);
 
-  // --- LÓGICA DE CARREGAMENTO ATUALIZADA ---
   useEffect(() => {
     if (clienteIdLogado !== null && clienteIdLogado !== undefined) {
       const loadInitialData = async () => {
-        setIsLoadingCalendar(true); // Inicia o loading do calendário
+        setIsLoadingCalendar(true);
         await fetchDiasOcupados();
-        setIsLoadingCalendar(false); // Finaliza o loading
+        setIsLoadingCalendar(false);
       };
       loadInitialData();
     }
@@ -191,7 +186,6 @@ export default function ConsultarDisponibilidade() {
       <Text style={styles.title}>Quadro de Horários</Text>
       <Text style={styles.subtitle}>Selecione uma data marcada para ver os horários.</Text>
 
-      {/* --- LÓGICA DE EXIBIÇÃO ATUALIZADA --- */}
       {isLoadingCalendar ? (
         <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#097d4c" />
@@ -212,7 +206,6 @@ export default function ConsultarDisponibilidade() {
                 enableSwipeMonths
             />
 
-            {/* Se não houver nenhuma data marcada, exibe a mensagem de estado vazio */}
             {Object.keys(markedDates).length === 0 && !selectedDate && (
                 <View style={styles.emptyStateContainer}>
                     <Ionicons name="calendar-outline" size={60} color="#b0b0b0" />
@@ -223,7 +216,6 @@ export default function ConsultarDisponibilidade() {
                 </View>
             )}
 
-            {/* Se uma data for selecionada, exibe os detalhes */}
             {selectedDate && (
                 <ScrollView contentContainerStyle={styles.scheduleContainer}>
                     <Text style={styles.scheduleTitle}>Consultas em {selectedDate}</Text>
@@ -232,15 +224,19 @@ export default function ConsultarDisponibilidade() {
                     ) : consultas.length > 0 ? (
                         consultas.map((item, idx) => {
                             const nutri = item.nutricionista;
-                            const dadosNutri = nutri && nutricionistasData[nutri.usuarioId];
+                            // --- CORREÇÃO APLICADA AQUI ---
+                            // O nome e o telefone agora estão dentro do objeto 'usuario'
+                            const nomeNutri = nutri?.usuario?.nome || 'Desconhecido';
+                            const telefoneNutri = nutri?.usuario?.telefone;
+
                             return (
                                 <View key={idx} style={[styles.timeSlot, styles.occupied]}>
                                     <Ionicons name="person-circle-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
                                     <View>
                                         <Text style={[styles.timeText, { color: '#fff' }]}>Horário: {item.horaConsulta}</Text>
-                                        <Text style={styles.nutriName}>Nutricionista: {nutri?.nome || 'Desconhecido'}</Text>
-                                        {dadosNutri?.telefone && (
-                                            <Text style={styles.nutriName}>Telefone: {dadosNutri.telefone}</Text>
+                                        <Text style={styles.nutriName}>Nutricionista: {nomeNutri}</Text>
+                                        {telefoneNutri && (
+                                            <Text style={styles.nutriName}>Telefone: {telefoneNutri}</Text>
                                         )}
                                         {item.observacoes && (
                                             <Text style={styles.nutriName}>Observações: {item.observacoes}</Text>
@@ -259,10 +255,6 @@ export default function ConsultarDisponibilidade() {
     </View>
   );
 }
-
-export const options = {
-  headerShown: false,
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -333,5 +325,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
     color: '#333',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#555',
+    fontSize: 16,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 30,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#888',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+  emptyStateSubText: {
+    fontSize: 14,
+    color: '#aaa',
+    marginTop: 5,
+    textAlign: 'center',
   },
 });
