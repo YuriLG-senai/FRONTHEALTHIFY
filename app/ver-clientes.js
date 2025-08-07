@@ -85,14 +85,18 @@ export default function VerClientes() {
   };
 
   const confirmarExclusao = (cliente) => {
-    Alert.alert(
-      "Confirmar Exclusão",
-      `Você tem certeza que deseja excluir o cliente "${cliente.nome}"? Esta ação não pode ser desfeita.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Excluir", style: "destructive", onPress: () => excluirCliente(cliente.clienteId) }
-      ]
+    // window.confirm é a forma padrão e segura de pedir confirmação em navegadores.
+    const confirmou = window.confirm(
+      `Você tem certeza que deseja excluir o cliente "${cliente.nome}"? Esta ação não pode ser desfeita.`
     );
+
+    // A função só continua se o usuário clicar em "OK" (o que faz 'confirmou' ser true).
+    if (confirmou) {
+      console.log(`Usuário confirmou a exclusão. Excluindo clienteId: ${cliente.clienteId}`);
+      excluirCliente(cliente.clienteId);
+    } else {
+      console.log("Usuário cancelou a exclusão.");
+    }
   };
 
   const excluirCliente = async (clienteId) => {
@@ -172,10 +176,10 @@ export default function VerClientes() {
         {clienteSelecionado && (
           <Modal visible={modalVisible} transparent={true} animationType="fade" onRequestClose={fecharModal}>
             <Pressable style={styles.modalContainer} onPress={fecharModal}>
-              <Pressable style={styles.modalContent} onPress={() => {}}>
+              <Pressable style={styles.modalContent} onPress={() => { }}>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <Text style={styles.modalTitulo}>{clienteSelecionado.nome}</Text>
-                  
+
                   {/* --- SEÇÃO DE DETALHES DO CLIENTE --- */}
                   <View style={styles.modalSection}>
                     <Text style={styles.modalSectionTitle}>Dados Pessoais</Text>
